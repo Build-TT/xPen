@@ -7,7 +7,7 @@
       name="description"
       content="xPen - personal income and expense tracker"
     />
-    <meta name="theme-color" content="#f7f8fa" />
+    <meta name="theme-color" content="#e5e6e8" />
     <title>xPen | Expenses</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="stylesheet" href="styles.css" />
@@ -15,7 +15,7 @@
   <body>
     <div class="app-shell">
       <header class="topbar" aria-label="Application header">
-        <a class="brand" href="#top" aria-label="xPen home">
+        <a class="brand" href="#dashboard" aria-label="xPen dashboard">
           <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
             <rect x="6" y="6" width="36" height="36" rx="12"></rect>
             <path d="M17 31.5 31.5 17M17 17l14.5 14.5"></path>
@@ -26,6 +26,33 @@
             <small>Personal expenses</small>
           </span>
         </a>
+
+        <nav class="main-nav" aria-label="Primary navigation">
+          <button
+            class="nav-link is-active"
+            type="button"
+            data-view="dashboard"
+            aria-current="page"
+          >
+            Dashboard
+          </button>
+          <button class="nav-link" type="button" data-view="entry">
+            Add Entry
+          </button>
+        </nav>
+
+        <label class="search-pill" aria-label="Search transactions">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m16.5 16.5 3.5 3.5"></path>
+          </svg>
+          <input
+            id="searchInput"
+            type="search"
+            placeholder="Search by note"
+            aria-label="Search transactions by note, category, or amount"
+          />
+        </label>
 
         <div class="topbar-actions">
           <button
@@ -71,158 +98,246 @@
             class="sr-only"
             type="file"
             accept="application/json"
+            tabindex="-1"
+            aria-hidden="true"
           />
         </div>
       </header>
 
-      <main id="top" class="main-grid">
-        <section class="summary-panel" aria-label="Financial summary">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">ภาพรวม</p>
-              <h1>รายรับรายจ่ายของคุณ</h1>
-            </div>
-            <div class="month-picker">
-              <label for="monthFilter">เดือน</label>
-              <input id="monthFilter" type="month" />
-            </div>
-          </div>
+      <main id="top" class="app-main">
+        <p id="viewAnnouncer" class="sr-only" aria-live="polite"></p>
+        <section
+          id="dashboardView"
+          class="view view-dashboard is-active"
+          data-view-panel="dashboard"
+          aria-label="Dashboard"
+          tabindex="-1"
+        >
+          <div class="dashboard-grid">
+            <section class="hero-panel neumorphic" aria-label="Financial summary">
+              <div class="hero-copy">
+                <p class="eyebrow">Personal finance</p>
+                <h1>xPen Dashboard</h1>
+                <p class="hero-subtitle">
+                  รายรับ รายจ่าย และเงินคงเหลือของเดือนนี้
+                </p>
+                <div class="hero-controls">
+                  <div class="month-picker">
+                    <label for="monthFilter">Month</label>
+                    <input id="monthFilter" type="month" />
+                  </div>
+                  <button class="soft-button" id="exportCsvButton" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 3v12m0 0 4-4m-4 4-4-4"></path>
+                      <path d="M5 19h14"></path>
+                    </svg>
+                    CSV
+                  </button>
+                </div>
+              </div>
 
-          <div class="metric-grid">
-            <article class="metric balance">
-              <span>คงเหลือ</span>
-              <strong id="balanceValue">฿0</strong>
-              <small id="balanceHint">พร้อมเริ่มบันทึก</small>
-            </article>
-            <article class="metric income">
-              <span>รายรับ</span>
-              <strong id="incomeValue">฿0</strong>
-              <small id="incomeCount">0 รายการ</small>
-            </article>
-            <article class="metric expense">
-              <span>รายจ่าย</span>
-              <strong id="expenseValue">฿0</strong>
-              <small id="expenseCount">0 รายการ</small>
-            </article>
-            <article class="metric rate">
-              <span>อัตราออม</span>
-              <strong id="savingRateValue">0%</strong>
-              <small id="savingRateHint">เทียบกับรายรับ</small>
-            </article>
-          </div>
-        </section>
-
-        <section class="entry-panel" aria-label="Add transaction">
-          <div class="section-heading compact">
-            <div>
-              <p class="eyebrow">บันทึก</p>
-              <h2>เพิ่มรายการ</h2>
-            </div>
-          </div>
-
-          <form id="transactionForm" autocomplete="off">
-            <fieldset class="segmented-control">
-              <legend>ประเภท</legend>
-              <label>
-                <input type="radio" name="type" value="income" checked />
-                <span>รายรับ</span>
-              </label>
-              <label>
-                <input type="radio" name="type" value="expense" />
-                <span>รายจ่าย</span>
-              </label>
-            </fieldset>
-
-            <label class="field">
-              <span>จำนวนเงิน</span>
-              <input
-                id="amountInput"
-                name="amount"
-                type="number"
-                min="0"
-                step="0.01"
-                inputmode="decimal"
-                placeholder="0.00"
-                required
-              />
-            </label>
-
-            <div class="form-row">
-              <label class="field">
-                <span>วันที่</span>
-                <input id="dateInput" name="date" type="date" required />
-              </label>
-              <label class="field">
-                <span>หมวดหมู่</span>
-                <select id="categoryInput" name="category"></select>
-              </label>
-            </div>
-
-            <label class="field">
-              <span>โน้ต</span>
-              <input
-                id="noteInput"
-                name="note"
-                type="text"
-                maxlength="80"
-                placeholder="เช่น เงินเดือน, อาหาร, เดินทาง"
-              />
-            </label>
-
-            <button class="primary-button" type="submit">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 5v14M5 12h14"></path>
-              </svg>
-              เพิ่มรายการ
-            </button>
-          </form>
-        </section>
-
-        <section class="insight-panel" aria-label="Spending insight">
-          <div class="section-heading compact">
-            <div>
-              <p class="eyebrow">Insight</p>
-              <h2>แนวโน้มเดือนนี้</h2>
-            </div>
-            <button class="ghost-button" id="exportCsvButton" type="button">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 3v12m0 0 4-4m-4 4-4-4"></path>
-                <path d="M5 19h14"></path>
-              </svg>
-              CSV
-            </button>
-          </div>
-
-          <div class="chart-wrap">
-            <canvas id="monthChart" width="900" height="360"></canvas>
-          </div>
-
-          <div class="category-list" id="categoryBreakdown"></div>
-        </section>
-
-        <section class="transactions-panel" aria-label="Transactions">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Ledger</p>
-              <h2>รายการทั้งหมด</h2>
-            </div>
-            <div class="filters">
-              <label class="search-field">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="11" cy="11" r="7"></circle>
-                  <path d="m16.5 16.5 3.5 3.5"></path>
+              <div class="balance-sculpture" aria-hidden="true">
+                <svg viewBox="0 0 320 320">
+                  <ellipse class="shadow" cx="165" cy="270" rx="92" ry="18"></ellipse>
+                  <path
+                    class="stone stone-green"
+                    d="M74 215c19-36 95-48 143-30 37 14 39 55 4 71-48 22-134 13-151-12-7-10-4-20 4-29Z"
+                  ></path>
+                  <path
+                    class="stone stone-pink"
+                    d="M90 158c25-28 101-36 141-13 31 18 24 56-13 68-50 17-126 11-143-13-9-14 2-30 15-42Z"
+                  ></path>
+                  <path
+                    class="stone stone-gold"
+                    d="M111 111c35-19 92-19 121 0 25 16 17 48-18 57-43 11-103 4-117-16-9-13 0-32 14-41Z"
+                  ></path>
+                  <path
+                    class="stone stone-cream"
+                    d="M133 65c29-16 75-12 96 9 19 20 8 48-23 55-35 7-76-5-87-26-8-15 1-31 14-38Z"
+                  ></path>
+                  <path class="shine" d="M111 177c23-18 67-23 97-12"></path>
+                  <path class="shine" d="M132 122c20-12 55-12 78-2"></path>
                 </svg>
-                <input id="searchInput" type="search" placeholder="ค้นหา" />
-              </label>
-              <select id="typeFilter" aria-label="Filter transaction type">
-                <option value="all">ทั้งหมด</option>
-                <option value="income">รายรับ</option>
-                <option value="expense">รายจ่าย</option>
-              </select>
-            </div>
-          </div>
+              </div>
+            </section>
 
-          <div class="transaction-list" id="transactionList"></div>
+            <section class="metric-grid" aria-label="Monthly metrics">
+              <article class="metric neumorphic balance">
+                <span>คงเหลือ</span>
+                <strong id="balanceValue">฿0</strong>
+                <small id="balanceHint">พร้อมเริ่มบันทึก</small>
+              </article>
+              <article class="metric neumorphic income">
+                <span>รายรับ</span>
+                <strong id="incomeValue">฿0</strong>
+                <small id="incomeCount">0 รายการ</small>
+              </article>
+              <article class="metric neumorphic expense">
+                <span>รายจ่าย</span>
+                <strong id="expenseValue">฿0</strong>
+                <small id="expenseCount">0 รายการ</small>
+              </article>
+              <article class="metric neumorphic rate">
+                <span>อัตราออม</span>
+                <strong id="savingRateValue">0%</strong>
+                <small id="savingRateHint">เทียบกับรายรับ</small>
+              </article>
+            </section>
+
+            <section class="chart-panel neumorphic" aria-label="Spending insight">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Insight</p>
+                  <h2>แนวโน้มเดือนนี้</h2>
+                </div>
+              </div>
+              <div class="chart-wrap">
+                <canvas
+                  id="monthChart"
+                  width="900"
+                  height="360"
+                  role="img"
+                  aria-label="Daily income and expense chart"
+                  aria-describedby="chartSummary"
+                >
+                  กราฟรายรับและรายจ่ายรายวันของเดือนที่เลือก
+                </canvas>
+                <p id="chartSummary" class="sr-only">
+                  ยังไม่มีข้อมูลสำหรับสร้างกราฟ
+                </p>
+              </div>
+            </section>
+
+            <section class="category-panel neumorphic" aria-label="Category breakdown">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Categories</p>
+                  <h2>รายจ่ายตามหมวด</h2>
+                </div>
+              </div>
+              <div class="category-list" id="categoryBreakdown"></div>
+            </section>
+
+            <section class="transactions-panel neumorphic" aria-label="Transactions">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Ledger</p>
+                  <h2>รายการทั้งหมด</h2>
+                </div>
+                <select id="typeFilter" aria-label="Filter transaction type">
+                  <option value="all">ทั้งหมด</option>
+                  <option value="income">รายรับ</option>
+                  <option value="expense">รายจ่าย</option>
+                </select>
+              </div>
+              <div class="transaction-list" id="transactionList"></div>
+            </section>
+          </div>
+        </section>
+
+        <section
+          id="entryView"
+          class="view view-entry"
+          data-view-panel="entry"
+          aria-label="Add transaction"
+          tabindex="-1"
+          hidden
+        >
+          <div class="entry-grid">
+            <section class="entry-panel neumorphic" aria-label="Add transaction form">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">New record</p>
+                  <h1>เพิ่มรายการ</h1>
+                </div>
+              </div>
+
+              <form id="transactionForm" autocomplete="off">
+                <fieldset class="segmented-control">
+                  <legend>ประเภท</legend>
+                  <label>
+                    <input type="radio" name="type" value="income" checked />
+                    <span>รายรับ</span>
+                  </label>
+                  <label>
+                    <input type="radio" name="type" value="expense" />
+                    <span>รายจ่าย</span>
+                  </label>
+                </fieldset>
+
+                <label class="field amount-field">
+                  <span>จำนวนเงิน</span>
+                  <input
+                    id="amountInput"
+                    name="amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputmode="decimal"
+                    placeholder="0.00"
+                    required
+                  />
+                </label>
+
+                <div class="form-row">
+                  <label class="field">
+                    <span>วันที่</span>
+                    <input id="dateInput" name="date" type="date" required />
+                  </label>
+                  <label class="field">
+                    <span>หมวดหมู่</span>
+                    <select id="categoryInput" name="category"></select>
+                  </label>
+                </div>
+
+                <label class="field">
+                  <span>โน้ต</span>
+                  <input
+                    id="noteInput"
+                    name="note"
+                    type="text"
+                    maxlength="80"
+                    placeholder="เช่น เงินเดือน, อาหาร, เดินทาง"
+                  />
+                </label>
+
+                <button class="primary-button" type="submit">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 5v14M5 12h14"></path>
+                  </svg>
+                  เพิ่มรายการ
+                </button>
+              </form>
+            </section>
+
+            <aside class="entry-side">
+              <section class="mini-summary neumorphic" aria-label="Entry summary">
+                <p class="eyebrow">This month</p>
+                <strong id="entryBalanceValue">฿0</strong>
+                <span id="entryMonthValue">เดือนปัจจุบัน</span>
+                <div class="mini-stats">
+                  <div>
+                    <small>รายการ</small>
+                    <b id="entryTotalValue">0</b>
+                  </div>
+                  <div>
+                    <small>ออม</small>
+                    <b id="entrySavingValue">0%</b>
+                  </div>
+                </div>
+              </section>
+
+              <section class="recent-panel neumorphic" aria-label="Recent entries">
+                <div class="section-heading compact">
+                  <div>
+                    <p class="eyebrow">Recent</p>
+                    <h2>รายการล่าสุด</h2>
+                  </div>
+                </div>
+                <div class="recent-list" id="recentPreview"></div>
+              </section>
+            </aside>
+          </div>
         </section>
       </main>
     </div>

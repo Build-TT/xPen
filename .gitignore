@@ -3,5 +3,7 @@ Thumbs.db
 *.log
 .env
 .env.*
+xpen-export-*.json
+xpen-export-*.csv
 node_modules/
 dist/

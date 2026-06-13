@@ -2,6 +2,8 @@
 
 const STORAGE_KEY = "xpen.transactions.v1";
 const CURRENCY = "THB";
+const MAX_IMPORT_BYTES = 1_000_000;
+const MAX_IMPORT_RECORDS = 5_000;
 
 const categories = {
   income: ["เงินเดือน", "ฟรีแลนซ์", "ลงทุน", "ของขวัญ", "อื่นๆ"],
@@ -10,6 +12,7 @@ const categories = {
 
 const state = {
   transactions: loadTransactions(),
+  view: "dashboard",
   filters: {
     month: getCurrentMonthKey(),
     type: "all",
@@ -18,6 +21,8 @@ const state = {
 };
 
 const els = {
+  navLinks: Array.from(document.querySelectorAll("[data-view]")),
+  viewPanels: Array.from(document.querySelectorAll("[data-view-panel]")),
   form: document.querySelector("#transactionForm"),
   typeInputs: Array.from(document.querySelectorAll("input[name='type']")),
   amount: document.querySelector("#amountInput"),
@@ -43,6 +48,13 @@ const els = {
   importButton: document.querySelector("#importButton"),
   importFile: document.querySelector("#importFile"),
   resetButton: document.querySelector("#resetButton"),
+  chartSummary: document.querySelector("#chartSummary"),
+  viewAnnouncer: document.querySelector("#viewAnnouncer"),
+  entryBalanceValue: document.querySelector("#entryBalanceValue"),
+  entryMonthValue: document.querySelector("#entryMonthValue"),
+  entryTotalValue: document.querySelector("#entryTotalValue"),
+  entrySavingValue: document.querySelector("#entrySavingValue"),
+  recentPreview: document.querySelector("#recentPreview"),
 };
 
 const money = new Intl.NumberFormat("th-TH", {
@@ -62,22 +74,32 @@ init();
 
 function init() {
   els.date.value = toDateInputValue(new Date());
+  state.filters.month = normalizeMonthKey(state.filters.month);
   els.monthFilter.value = state.filters.month;
   syncCategoryOptions(getSelectedType());
   bindEvents();
+  setActiveView(getInitialView(), false, false);
   render();
 }
 
 function bindEvents() {
   els.form.addEventListener("submit", handleSubmit);
   window.addEventListener("resize", debounce(renderChart, 120));
+  window.addEventListener("hashchange", () => {
+    setActiveView(getInitialView(), false);
+  });
+
+  els.navLinks.forEach((button) => {
+    button.addEventListener("click", () => setActiveView(button.dataset.view));
+  });
 
   els.typeInputs.forEach((input) => {
     input.addEventListener("change", () => syncCategoryOptions(input.value));
   });
 
   els.monthFilter.addEventListener("change", () => {
-    state.filters.month = els.monthFilter.value || getCurrentMonthKey();
+    state.filters.month = normalizeMonthKey(els.monthFilter.value);
+    els.monthFilter.value = state.filters.month;
     render();
   });
 
@@ -147,9 +169,13 @@ function syncCategoryOptions(type) {
 
 function render() {
   renderSummary();
-  renderChart();
+  if (state.view === "dashboard") {
+    renderChart();
+  }
   renderBreakdown();
   renderTransactions();
+  renderEntrySummary();
+  renderRecentPreview();
 }
 
 function renderSummary() {
@@ -172,6 +198,8 @@ function renderSummary() {
 }
 
 function renderChart() {
+  if (state.view !== "dashboard") return;
+
   const canvas = els.chart;
   const ctx = canvas.getContext("2d");
   const monthly = getMonthTransactions();
@@ -224,6 +252,7 @@ function renderChart() {
   });
 
   drawChartLabels(ctx, days, cssHeight, pad, groupWidth);
+  renderChartSummary(incomeByDay, expenseByDay);
 }
 
 function drawGrid(ctx, width, height, pad, maxValue) {
@@ -368,8 +397,101 @@ function renderTransactions() {
   });
 }
 
+function renderEntrySummary() {
+  const monthly = getCurrentMonthTransactions();
+  const income = sumByType(monthly, "income");
+  const expense = sumByType(monthly, "expense");
+  const balance = income - expense;
+  const savingRate = income > 0 ? Math.round((balance / income) * 100) : 0;
+
+  els.entryBalanceValue.textContent = money.format(balance);
+  els.entryMonthValue.textContent = formatMonth(getCurrentMonthKey());
+  els.entryTotalValue.textContent = String(monthly.length);
+  els.entrySavingValue.textContent = `${savingRate}%`;
+}
+
+function renderRecentPreview() {
+  const recent = state.transactions.slice(0, 5);
+  els.recentPreview.replaceChildren();
+
+  if (recent.length === 0) {
+    els.recentPreview.append(els.emptyTemplate.content.cloneNode(true));
+    return;
+  }
+
+  recent.forEach((item) => {
+    const row = document.createElement("article");
+    row.className = "transaction-row";
+
+    const icon = document.createElement("div");
+    icon.className = `type-icon ${item.type}`;
+    icon.textContent = item.type === "income" ? "+" : "-";
+
+    const main = document.createElement("div");
+    main.className = "transaction-main";
+    const title = document.createElement("strong");
+    title.textContent = item.note || item.category;
+    const meta = document.createElement("span");
+    meta.textContent = `${formatDate(item.date)} · ${item.category}`;
+    main.append(title, meta);
+
+    const amount = document.createElement("div");
+    amount.className = `transaction-amount ${item.type}`;
+    amount.textContent = `${item.type === "income" ? "+" : "-"}${money.format(
+      item.amount,
+    )}`;
+
+    row.append(icon, main, amount);
+    els.recentPreview.append(row);
+  });
+}
+
+function setActiveView(viewName, updateHash = true, moveFocus = true) {
+  const nextView = viewName === "entry" ? "entry" : "dashboard";
+  state.view = nextView;
+  let activePanel = null;
+
+  els.navLinks.forEach((button) => {
+    const isActive = button.dataset.view === nextView;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-current", isActive ? "page" : "false");
+  });
+
+  els.viewPanels.forEach((panel) => {
+    const isActive = panel.dataset.viewPanel === nextView;
+    panel.hidden = !isActive;
+    panel.classList.toggle("is-active", isActive);
+    if (isActive) activePanel = panel;
+  });
+
+  if (updateHash && window.location.hash !== `#${nextView}`) {
+    window.history.replaceState(null, "", `#${nextView}`);
+  }
+
+  if (nextView === "dashboard") {
+    window.requestAnimationFrame(renderChart);
+  }
+
+  els.viewAnnouncer.textContent =
+    nextView === "dashboard" ? "Dashboard view opened" : "Add entry view opened";
+
+  if (moveFocus && activePanel) {
+    window.requestAnimationFrame(() => activePanel.focus({ preventScroll: true }));
+  }
+}
+
+function getInitialView() {
+  return window.location.hash === "#entry" ? "entry" : "dashboard";
+}
+
 function getMonthTransactions() {
-  return state.transactions.filter((item) => item.date.startsWith(state.filters.month));
+  const month = normalizeMonthKey(state.filters.month);
+  return state.transactions.filter((item) => item.date.startsWith(month));
+}
+
+function getCurrentMonthTransactions() {
+  const month = getCurrentMonthKey();
+  return state.transactions.filter((item) => item.date.startsWith(month));
 }
 
 function getFilteredTransactions() {
@@ -440,6 +562,12 @@ function importJson(event) {
   const file = event.target.files?.[0];
   if (!file) return;
 
+  if (file.size > MAX_IMPORT_BYTES) {
+    window.alert("ไฟล์ใหญ่เกินไป จำกัดการนำเข้าไว้ที่ 1 MB");
+    els.importFile.value = "";
+    return;
+  }
+
   const reader = new FileReader();
   reader.addEventListener("load", () => {
     try {
@@ -452,10 +580,24 @@ function importJson(event) {
         throw new Error("Invalid xPen file");
       }
 
-      state.transactions = transactions
+      if (transactions.length > MAX_IMPORT_RECORDS) {
+        throw new Error("Too many records");
+      }
+
+      const confirmed =
+        state.transactions.length === 0 ||
+        window.confirm(
+          "การนำเข้าจะแทนที่รายการทั้งหมดในเครื่องนี้ ต้องการดำเนินการต่อ?",
+        );
+
+      if (!confirmed) return;
+
+      state.transactions = ensureUniqueTransactionIds(
+        transactions
         .map(normalizeTransaction)
         .filter(Boolean)
-        .sort((a, b) => b.date.localeCompare(a.date));
+          .sort((a, b) => b.date.localeCompare(a.date)),
+      );
 
       persist();
       render();
@@ -469,11 +611,16 @@ function importJson(event) {
 }
 
 function normalizeTransaction(item) {
-  const type = item?.type === "expense" ? "expense" : "income";
+  const type = item?.type;
   const amount = Number.parseFloat(item?.amount);
   const date = typeof item?.date === "string" ? item.date.slice(0, 10) : "";
 
-  if (!Number.isFinite(amount) || amount <= 0 || !isValidDateValue(date)) {
+  if (
+    (type !== "income" && type !== "expense") ||
+    !Number.isFinite(amount) ||
+    amount <= 0 ||
+    !isValidDateValue(date)
+  ) {
     return null;
   }
 
@@ -501,7 +648,7 @@ function loadTransactions() {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.map(normalizeTransaction).filter(Boolean);
+    return ensureUniqueTransactionIds(parsed.map(normalizeTransaction).filter(Boolean));
   } catch {
     return [];
   }
@@ -524,7 +671,7 @@ function downloadFile(filename, content, type) {
   document.body.append(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function escapeCsv(value) {
@@ -587,6 +734,10 @@ function getCurrentMonthKey() {
   return toDateInputValue(new Date()).slice(0, 7);
 }
 
+function normalizeMonthKey(monthKey) {
+  return isValidMonthKey(monthKey) ? monthKey : getCurrentMonthKey();
+}
+
 function toDateInputValue(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -595,7 +746,7 @@ function toDateInputValue(date) {
 }
 
 function getDaysInMonth(monthKey) {
-  const [year, month] = monthKey.split("-").map(Number);
+  const [year, month] = normalizeMonthKey(monthKey).split("-").map(Number);
   return new Date(year, month, 0).getDate();
 }
 
@@ -609,6 +760,52 @@ function formatDate(dateValue) {
     month: "short",
     year: "numeric",
   }).format(new Date(`${dateValue}T00:00:00`));
+}
+
+function formatMonth(monthKey) {
+  const [year, month] = normalizeMonthKey(monthKey).split("-").map(Number);
+  return new Intl.DateTimeFormat("th-TH", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(year, month - 1, 1));
+}
+
+function renderChartSummary(incomeByDay, expenseByDay) {
+  const income = incomeByDay.reduce((sum, value) => sum + value, 0);
+  const expense = expenseByDay.reduce((sum, value) => sum + value, 0);
+  const peakExpense = Math.max(...expenseByDay, 0);
+  const peakDay = expenseByDay.findIndex((value) => value === peakExpense) + 1;
+
+  els.chartSummary.textContent =
+    peakExpense > 0
+      ? `เดือน ${formatMonth(state.filters.month)} มีรายรับรวม ${money.format(
+          income,
+        )} รายจ่ายรวม ${money.format(expense)} และรายจ่ายสูงสุดวันที่ ${peakDay}`
+      : `เดือน ${formatMonth(state.filters.month)} มีรายรับรวม ${money.format(
+          income,
+        )} และยังไม่มีรายจ่าย`;
+}
+
+function ensureUniqueTransactionIds(transactions) {
+  const seen = new Set();
+
+  return transactions.map((item) => {
+    let id = item.id;
+    while (!id || seen.has(id)) {
+      id = createId();
+    }
+    seen.add(id);
+    return { ...item, id };
+  });
+}
+
+function isValidMonthKey(monthKey) {
+  if (!/^\d{4}-\d{2}$/.test(monthKey || "")) {
+    return false;
+  }
+
+  const [year, month] = monthKey.split("-").map(Number);
+  return month >= 1 && month <= 12 && year >= 1970 && year <= 9999;
 }
 
 function isValidDateValue(dateValue) {
