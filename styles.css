@@ -330,6 +330,11 @@ form {
   background: #111216;
 }
 
+.segmented-control input:focus-visible + span {
+  border-color: rgba(10, 132, 255, 0.72);
+  box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.13);
+}
+
 .field {
   display: grid;
   gap: 7px;

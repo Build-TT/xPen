@@ -13,13 +13,15 @@ Minimal personal income and expense tracker. Built as a dependency-free responsi
 
 ## Run Locally
 
-Open `index.html` in a browser, or serve the folder with any static server:
+Serve the folder with any static server:
 
 ```powershell
 python -m http.server 4173
 ```
 
 Then visit `http://localhost:4173`.
+
+Opening `index.html` directly can work in some browsers, but `localStorage` behavior on `file:` URLs is not consistent. Localhost is the recommended way to test.
 
 ## Deploy Free With GitHub Pages
 
@@ -39,3 +41,5 @@ In GitHub, open **Settings > Pages**, choose **GitHub Actions**, and the include
 ## Privacy
 
 xPen stores data in your browser with `localStorage`. No backend is used and no financial data leaves your device unless you export or deploy your own copy.
+
+For private financial data, deploy xPen on a dedicated domain or subdomain. Browser `localStorage` is scoped by origin, so other pages running scripts on the same origin can access the same origin storage.

@@ -48,7 +48,8 @@ const els = {
 const money = new Intl.NumberFormat("th-TH", {
   style: "currency",
   currency: CURRENCY,
-  maximumFractionDigits: 0,
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
 });
 
 const compactMoney = new Intl.NumberFormat("th-TH", {
@@ -180,6 +181,8 @@ function renderChart() {
 
   monthly.forEach((item) => {
     const day = Number(item.date.slice(8, 10)) - 1;
+    if (day < 0 || day >= days) return;
+
     if (item.type === "income") {
       incomeByDay[day] += item.amount;
     } else {
@@ -469,9 +472,8 @@ function normalizeTransaction(item) {
   const type = item?.type === "expense" ? "expense" : "income";
   const amount = Number.parseFloat(item?.amount);
   const date = typeof item?.date === "string" ? item.date.slice(0, 10) : "";
-  const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(date);
 
-  if (!Number.isFinite(amount) || amount <= 0 || !isValidDate) {
+  if (!Number.isFinite(amount) || amount <= 0 || !isValidDateValue(date)) {
     return null;
   }
 
@@ -526,10 +528,19 @@ function downloadFile(filename, content, type) {
 }
 
 function escapeCsv(value) {
-  const text = String(value ?? "");
+  const text = sanitizeCsvCell(String(value ?? ""));
   if (/[",\n]/.test(text)) {
     return `"${text.replaceAll('"', '""')}"`;
   }
+  return text;
+}
+
+function sanitizeCsvCell(text) {
+  const trimmed = text.trimStart();
+  if (/^[=+\-@\t\r]/.test(trimmed)) {
+    return `'${text}`;
+  }
+
   return text;
 }
 
@@ -589,9 +600,22 @@ function getDaysInMonth(monthKey) {
 }
 
 function formatDate(dateValue) {
+  if (!isValidDateValue(dateValue)) {
+    return dateValue;
+  }
+
   return new Intl.DateTimeFormat("th-TH", {
     day: "numeric",
     month: "short",
     year: "numeric",
   }).format(new Date(`${dateValue}T00:00:00`));
+}
+
+function isValidDateValue(dateValue) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    return false;
+  }
+
+  const date = new Date(`${dateValue}T00:00:00`);
+  return !Number.isNaN(date.getTime()) && toDateInputValue(date) === dateValue;
 }
