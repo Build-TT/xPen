@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="xPen - personal income and expense tracker"
+    />
+    <meta name="theme-color" content="#f7f8fa" />
+    <title>xPen | Expenses</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar" aria-label="Application header">
+        <a class="brand" href="#top" aria-label="xPen home">
+          <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+            <rect x="6" y="6" width="36" height="36" rx="12"></rect>
+            <path d="M17 31.5 31.5 17M17 17l14.5 14.5"></path>
+            <path d="M29 18h4.5c2.5 0 4 1.5 4 3.6 0 2.2-1.5 3.7-4 3.7H29"></path>
+          </svg>
+          <span>
+            <strong>xPen</strong>
+            <small>Personal expenses</small>
+          </span>
+        </a>
+
+        <div class="topbar-actions">
+          <button
+            class="icon-button"
+            id="exportJsonButton"
+            type="button"
+            aria-label="Export JSON"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v12m0 0 4-4m-4 4-4-4"></path>
+              <path d="M5 19h14"></path>
+            </svg>
+            <span class="tooltip">Export JSON</span>
+          </button>
+          <button
+            class="icon-button"
+            id="importButton"
+            type="button"
+            aria-label="Import JSON"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 21V9m0 0 4 4m-4-4-4 4"></path>
+              <path d="M5 5h14"></path>
+            </svg>
+            <span class="tooltip">Import JSON</span>
+          </button>
+          <button
+            class="icon-button danger"
+            id="resetButton"
+            type="button"
+            aria-label="Clear all data"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h16"></path>
+              <path d="M10 11v6m4-6v6"></path>
+              <path d="M6 7l1 13h10l1-13"></path>
+              <path d="M9 7V4h6v3"></path>
+            </svg>
+            <span class="tooltip">Clear data</span>
+          </button>
+          <input
+            id="importFile"
+            class="sr-only"
+            type="file"
+            accept="application/json"
+          />
+        </div>
+      </header>
+
+      <main id="top" class="main-grid">
+        <section class="summary-panel" aria-label="Financial summary">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">ภาพรวม</p>
+              <h1>รายรับรายจ่ายของคุณ</h1>
+            </div>
+            <div class="month-picker">
+              <label for="monthFilter">เดือน</label>
+              <input id="monthFilter" type="month" />
+            </div>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric balance">
+              <span>คงเหลือ</span>
+              <strong id="balanceValue">฿0</strong>
+              <small id="balanceHint">พร้อมเริ่มบันทึก</small>
+            </article>
+            <article class="metric income">
+              <span>รายรับ</span>
+              <strong id="incomeValue">฿0</strong>
+              <small id="incomeCount">0 รายการ</small>
+            </article>
+            <article class="metric expense">
+              <span>รายจ่าย</span>
+              <strong id="expenseValue">฿0</strong>
+              <small id="expenseCount">0 รายการ</small>
+            </article>
+            <article class="metric rate">
+              <span>อัตราออม</span>
+              <strong id="savingRateValue">0%</strong>
+              <small id="savingRateHint">เทียบกับรายรับ</small>
+            </article>
+          </div>
+        </section>
+
+        <section class="entry-panel" aria-label="Add transaction">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">บันทึก</p>
+              <h2>เพิ่มรายการ</h2>
+            </div>
+          </div>
+
+          <form id="transactionForm" autocomplete="off">
+            <fieldset class="segmented-control">
+              <legend>ประเภท</legend>
+              <label>
+                <input type="radio" name="type" value="income" checked />
+                <span>รายรับ</span>
+              </label>
+              <label>
+                <input type="radio" name="type" value="expense" />
+                <span>รายจ่าย</span>
+              </label>
+            </fieldset>
+
+            <label class="field">
+              <span>จำนวนเงิน</span>
+              <input
+                id="amountInput"
+                name="amount"
+                type="number"
+                min="0"
+                step="0.01"
+                inputmode="decimal"
+                placeholder="0.00"
+                required
+              />
+            </label>
+
+            <div class="form-row">
+              <label class="field">
+                <span>วันที่</span>
+                <input id="dateInput" name="date" type="date" required />
+              </label>
+              <label class="field">
+                <span>หมวดหมู่</span>
+                <select id="categoryInput" name="category"></select>
+              </label>
+            </div>
+
+            <label class="field">
+              <span>โน้ต</span>
+              <input
+                id="noteInput"
+                name="note"
+                type="text"
+                maxlength="80"
+                placeholder="เช่น เงินเดือน, อาหาร, เดินทาง"
+              />
+            </label>
+
+            <button class="primary-button" type="submit">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 5v14M5 12h14"></path>
+              </svg>
+              เพิ่มรายการ
+            </button>
+          </form>
+        </section>
+
+        <section class="insight-panel" aria-label="Spending insight">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Insight</p>
+              <h2>แนวโน้มเดือนนี้</h2>
+            </div>
+            <button class="ghost-button" id="exportCsvButton" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3v12m0 0 4-4m-4 4-4-4"></path>
+                <path d="M5 19h14"></path>
+              </svg>
+              CSV
+            </button>
+          </div>
+
+          <div class="chart-wrap">
+            <canvas id="monthChart" width="900" height="360"></canvas>
+          </div>
+
+          <div class="category-list" id="categoryBreakdown"></div>
+        </section>
+
+        <section class="transactions-panel" aria-label="Transactions">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Ledger</p>
+              <h2>รายการทั้งหมด</h2>
+            </div>
+            <div class="filters">
+              <label class="search-field">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7"></circle>
+                  <path d="m16.5 16.5 3.5 3.5"></path>
+                </svg>
+                <input id="searchInput" type="search" placeholder="ค้นหา" />
+              </label>
+              <select id="typeFilter" aria-label="Filter transaction type">
+                <option value="all">ทั้งหมด</option>
+                <option value="income">รายรับ</option>
+                <option value="expense">รายจ่าย</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="transaction-list" id="transactionList"></div>
+        </section>
+      </main>
+    </div>
+
+    <template id="emptyStateTemplate">
+      <div class="empty-state">
+        <svg viewBox="0 0 96 96" aria-hidden="true">
+          <rect x="20" y="20" width="56" height="56" rx="18"></rect>
+          <path d="M34 40h28M34 50h18M34 60h24"></path>
+        </svg>
+        <strong>ยังไม่มีรายการในช่วงนี้</strong>
+        <span>เริ่มจากเพิ่มรายรับหรือรายจ่ายแรกของคุณ</span>
+      </div>
+    </template>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>

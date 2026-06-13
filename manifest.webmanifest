@@ -1,0 +1,16 @@
+{
+  "name": "xPen Expenses",
+  "short_name": "xPen",
+  "description": "Personal income and expense tracker",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7f8fa",
+  "theme_color": "#f7f8fa",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
