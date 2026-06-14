@@ -27,6 +27,7 @@ const state = {
   paymentMethods: initialPaymentMethods,
   transactions: loadTransactions(initialPaymentMethods, initialCategories),
   view: "dashboard",
+  editingTransactionId: "",
   filters: {
     month: getCurrentMonthKey(),
     type: "all",
@@ -78,6 +79,16 @@ const els = {
   categoryNameInput: document.querySelector("#categoryNameInput"),
   incomeCategoryList: document.querySelector("#incomeCategoryList"),
   expenseCategoryList: document.querySelector("#expenseCategoryList"),
+  editModal: document.querySelector("#transactionEditModal"),
+  editForm: document.querySelector("#editTransactionForm"),
+  editTypeInputs: Array.from(document.querySelectorAll("input[name='editType']")),
+  editAmount: document.querySelector("#editAmountInput"),
+  editDate: document.querySelector("#editDateInput"),
+  editCategory: document.querySelector("#editCategoryInput"),
+  editPaymentMethod: document.querySelector("#editPaymentMethodInput"),
+  editNote: document.querySelector("#editNoteInput"),
+  closeEditButton: document.querySelector("#closeEditTransactionButton"),
+  cancelEditButton: document.querySelector("#cancelEditTransactionButton"),
 };
 
 const money = new Intl.NumberFormat("th-TH", {
@@ -123,6 +134,12 @@ function bindEvents() {
     });
   });
 
+  els.editTypeInputs.forEach((input) => {
+    input.addEventListener("change", () => {
+      if (input.checked) syncEditCategoryOptions(input.value);
+    });
+  });
+
   els.monthFilter.addEventListener("change", () => {
     state.filters.month = normalizeMonthKey(els.monthFilter.value);
     els.monthFilter.value = state.filters.month;
@@ -146,6 +163,19 @@ function bindEvents() {
   els.resetButton.addEventListener("click", resetData);
   els.paymentMethodForm.addEventListener("submit", handlePaymentMethodSubmit);
   els.categoryForm.addEventListener("submit", handleCategorySubmit);
+  els.editForm.addEventListener("submit", handleEditTransactionSubmit);
+  els.closeEditButton.addEventListener("click", closeEditTransactionModal);
+  els.cancelEditButton.addEventListener("click", closeEditTransactionModal);
+  els.editModal.addEventListener("click", (event) => {
+    if (event.target.matches("[data-close-edit-modal]")) {
+      closeEditTransactionModal();
+    }
+  });
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !els.editModal.hidden) {
+      closeEditTransactionModal();
+    }
+  });
 }
 
 function handleSubmit(event) {
@@ -198,6 +228,22 @@ function syncCategoryOptions(type) {
   });
 }
 
+function syncEditCategoryOptions(type, selectedCategory = els.editCategory.value) {
+  els.editCategory.replaceChildren();
+  const categories = state.categories[type] || [];
+  const nextSelected = categories.includes(selectedCategory)
+    ? selectedCategory
+    : categories[0] || "";
+
+  categories.forEach((category) => {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    option.selected = category === nextSelected;
+    els.editCategory.append(option);
+  });
+}
+
 function syncPaymentMethodOptions(selectedId = els.paymentMethod.value) {
   const fallbackId = getFallbackPaymentMethodId();
   const nextSelectedId = state.paymentMethods.some((method) => method.id === selectedId)
@@ -211,6 +257,22 @@ function syncPaymentMethodOptions(selectedId = els.paymentMethod.value) {
     option.textContent = method.name;
     option.selected = method.id === nextSelectedId;
     els.paymentMethod.append(option);
+  });
+}
+
+function syncEditPaymentMethodOptions(selectedId = els.editPaymentMethod.value) {
+  const fallbackId = getFallbackPaymentMethodId();
+  const nextSelectedId = state.paymentMethods.some((method) => method.id === selectedId)
+    ? selectedId
+    : fallbackId;
+
+  els.editPaymentMethod.replaceChildren();
+  state.paymentMethods.forEach((method) => {
+    const option = document.createElement("option");
+    option.value = method.id;
+    option.textContent = method.name;
+    option.selected = method.id === nextSelectedId;
+    els.editPaymentMethod.append(option);
   });
 }
 
@@ -688,18 +750,96 @@ function createTransactionRow(item, options = {}) {
   row.append(icon, main, amount);
 
   if (options.showDelete) {
-    const button = document.createElement("button");
-    button.className = "row-action";
-    button.type = "button";
-    button.setAttribute("aria-label", "Delete transaction");
-    button.dataset.id = item.id;
-    button.innerHTML =
+    const actions = document.createElement("div");
+    actions.className = "row-actions";
+
+    const editButton = document.createElement("button");
+    editButton.className = "row-action edit";
+    editButton.type = "button";
+    editButton.setAttribute("aria-label", "Edit transaction");
+    editButton.dataset.id = item.id;
+    editButton.innerHTML =
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
+    editButton.addEventListener("click", () => openEditTransaction(item.id));
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "row-action delete";
+    deleteButton.type = "button";
+    deleteButton.setAttribute("aria-label", "Delete transaction");
+    deleteButton.dataset.id = item.id;
+    deleteButton.innerHTML =
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6m4-6v6"></path><path d="M6 7l1 13h10l1-13"></path><path d="M9 7V4h6v3"></path></svg>';
-    button.addEventListener("click", () => removeTransaction(item.id));
-    row.append(button);
+    deleteButton.addEventListener("click", () => removeTransaction(item.id));
+
+    actions.append(editButton, deleteButton);
+    row.append(actions);
   }
 
   return row;
+}
+
+function openEditTransaction(id) {
+  const item = state.transactions.find((transaction) => transaction.id === id);
+  if (!item) return;
+
+  state.editingTransactionId = id;
+  const typeInput = document.querySelector(`input[name="editType"][value="${item.type}"]`);
+  if (typeInput) typeInput.checked = true;
+  els.editAmount.value = item.amount;
+  els.editDate.value = item.date;
+  syncEditCategoryOptions(item.type, item.category);
+  syncEditPaymentMethodOptions(item.paymentMethodId);
+  els.editNote.value = item.note || "";
+  els.editModal.hidden = false;
+  document.body.style.overflow = "hidden";
+  window.requestAnimationFrame(() => els.editAmount.focus());
+}
+
+function closeEditTransactionModal() {
+  state.editingTransactionId = "";
+  els.editForm.reset();
+  els.editModal.hidden = true;
+  document.body.style.overflow = "";
+}
+
+function handleEditTransactionSubmit(event) {
+  event.preventDefault();
+
+  const item = state.transactions.find(
+    (transaction) => transaction.id === state.editingTransactionId,
+  );
+  if (!item) {
+    closeEditTransactionModal();
+    return;
+  }
+
+  const type = getSelectedEditType();
+  const amount = Number.parseFloat(els.editAmount.value);
+  const date = els.editDate.value;
+  const category = els.editCategory.value;
+  const paymentMethodId = els.editPaymentMethod.value;
+  const note = els.editNote.value.trim();
+
+  if (!Number.isFinite(amount) || amount <= 0 || !date || !category || !paymentMethodId) {
+    els.editAmount.focus();
+    return;
+  }
+
+  item.type = type;
+  item.amount = roundMoney(amount);
+  item.date = date;
+  item.category = category;
+  item.paymentMethodId = paymentMethodId;
+  item.note = note;
+  item.updatedAt = new Date().toISOString();
+
+  persistTransactions();
+  closeEditTransactionModal();
+  render();
+}
+
+function getSelectedEditType() {
+  return document.querySelector("input[name='editType']:checked")?.value || "expense";
 }
 
 function setActiveView(viewName, updateHash = true, moveFocus = true) {
