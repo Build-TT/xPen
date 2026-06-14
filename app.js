@@ -236,19 +236,22 @@ function renderChart() {
   const maxValue = Math.max(...incomeByDay, ...expenseByDay, 1);
   const groupWidth = plotWidth / days;
   const barWidth = Math.max(3, Math.min(10, groupWidth * 0.3));
+  const theme = getComputedStyle(document.documentElement);
+  const incomeColor = theme.getPropertyValue("--green").trim() || "#047857";
+  const expenseColor = theme.getPropertyValue("--red").trim() || "#b91c1c";
 
   drawGrid(ctx, cssWidth, cssHeight, pad, maxValue);
 
   incomeByDay.forEach((value, index) => {
     const x = pad.left + index * groupWidth + groupWidth / 2 - barWidth - 1;
     const heightPx = (value / maxValue) * plotHeight;
-    drawBar(ctx, x, pad.top + plotHeight - heightPx, barWidth, heightPx, "#24b35b");
+    drawBar(ctx, x, pad.top + plotHeight - heightPx, barWidth, heightPx, incomeColor);
   });
 
   expenseByDay.forEach((value, index) => {
     const x = pad.left + index * groupWidth + groupWidth / 2 + 1;
     const heightPx = (value / maxValue) * plotHeight;
-    drawBar(ctx, x, pad.top + plotHeight - heightPx, barWidth, heightPx, "#f04438");
+    drawBar(ctx, x, pad.top + plotHeight - heightPx, barWidth, heightPx, expenseColor);
   });
 
   drawChartLabels(ctx, days, cssHeight, pad, groupWidth);
