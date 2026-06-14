@@ -519,6 +519,51 @@
       </main>
     </div>
 
+    <div class="modal" id="duplicateTransactionModal" hidden>
+      <div class="modal-backdrop" data-close-duplicate-modal></div>
+      <section
+        class="modal-panel modal-panel-compact"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="duplicateTransactionTitle"
+      >
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Duplicate check</p>
+            <h2 id="duplicateTransactionTitle">พบข้อมูลคล้ายกัน</h2>
+          </div>
+          <button
+            class="icon-button"
+            id="closeDuplicateTransactionButton"
+            type="button"
+            aria-label="Close duplicate confirmation"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18 6 6 18"></path>
+              <path d="m6 6 12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="duplicate-check">
+          <p>
+            วันที่ ยอดเงิน และวิธีชำระตรงกับรายการที่มีอยู่แล้ว ต้องการบันทึกซ้ำไหม?
+          </p>
+          <strong id="duplicateTransactionSummary"></strong>
+          <span id="duplicateTransactionDetail"></span>
+        </div>
+
+        <div class="modal-actions">
+          <button class="soft-button" id="cancelDuplicateTransactionButton" type="button">
+            ยกเลิก
+          </button>
+          <button class="primary-button" id="confirmDuplicateTransactionButton" type="button">
+            บันทึกซ้ำ
+          </button>
+        </div>
+      </section>
+    </div>
+
     <div class="modal" id="transactionEditModal" hidden>
       <div class="modal-backdrop" data-close-edit-modal></div>
       <section

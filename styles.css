@@ -782,6 +782,10 @@ select:focus,
   padding: 20px;
 }
 
+.modal-panel-compact {
+  width: min(520px, 100%);
+}
+
 .modal-header,
 .modal-actions {
   display: flex;
@@ -796,6 +800,36 @@ select:focus,
 
 .modal-actions {
   justify-content: flex-end;
+}
+
+.duplicate-check {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.duplicate-check p {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+
+.duplicate-check strong {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-soft);
+  padding: 12px;
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.duplicate-check span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
 }
 
 .entry-panel {

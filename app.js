@@ -28,6 +28,7 @@ const state = {
   transactions: loadTransactions(initialPaymentMethods, initialCategories),
   view: "dashboard",
   editingTransactionId: "",
+  pendingDuplicateTransaction: null,
   activeCategoryType: "expense",
   filters: {
     month: getCurrentMonthKey(),
@@ -92,6 +93,12 @@ const els = {
   editNote: document.querySelector("#editNoteInput"),
   closeEditButton: document.querySelector("#closeEditTransactionButton"),
   cancelEditButton: document.querySelector("#cancelEditTransactionButton"),
+  duplicateModal: document.querySelector("#duplicateTransactionModal"),
+  duplicateSummary: document.querySelector("#duplicateTransactionSummary"),
+  duplicateDetail: document.querySelector("#duplicateTransactionDetail"),
+  closeDuplicateButton: document.querySelector("#closeDuplicateTransactionButton"),
+  cancelDuplicateButton: document.querySelector("#cancelDuplicateTransactionButton"),
+  confirmDuplicateButton: document.querySelector("#confirmDuplicateTransactionButton"),
 };
 
 const money = new Intl.NumberFormat("th-TH", {
@@ -181,7 +188,20 @@ function bindEvents() {
       closeEditTransactionModal();
     }
   });
+  els.closeDuplicateButton.addEventListener("click", closeDuplicateTransactionModal);
+  els.cancelDuplicateButton.addEventListener("click", closeDuplicateTransactionModal);
+  els.confirmDuplicateButton.addEventListener("click", confirmDuplicateTransaction);
+  els.duplicateModal.addEventListener("click", (event) => {
+    if (event.target.matches("[data-close-duplicate-modal]")) {
+      closeDuplicateTransactionModal();
+    }
+  });
   window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !els.duplicateModal.hidden) {
+      closeDuplicateTransactionModal();
+      return;
+    }
+
     if (event.key === "Escape" && !els.editModal.hidden) {
       closeEditTransactionModal();
     }
@@ -203,7 +223,7 @@ function handleSubmit(event) {
     return;
   }
 
-  state.transactions.unshift({
+  const transaction = {
     id: createId(),
     type,
     amount: roundMoney(amount),
@@ -212,16 +232,73 @@ function handleSubmit(event) {
     paymentMethodId,
     note,
     createdAt: new Date().toISOString(),
-  });
+  };
 
+  const duplicate = findDuplicateTransaction(transaction);
+  if (duplicate) {
+    openDuplicateTransactionModal(transaction, duplicate);
+    return;
+  }
+
+  saveNewTransaction(transaction);
+}
+
+function saveNewTransaction(transaction) {
+  state.transactions.unshift(transaction);
   persistTransactions();
+  resetTransactionForm();
+  render();
+}
+
+function resetTransactionForm() {
   els.form.reset();
   document.querySelector("input[name='type'][value='expense']").checked = true;
   els.date.value = toDateInputValue(new Date());
   syncCategoryOptions("expense");
   syncPaymentMethodOptions();
   els.amount.focus();
-  render();
+}
+
+function findDuplicateTransaction(transaction) {
+  return state.transactions.find(
+    (item) =>
+      item.date === transaction.date &&
+      item.amount === transaction.amount &&
+      item.paymentMethodId === transaction.paymentMethodId,
+  );
+}
+
+function openDuplicateTransactionModal(transaction, duplicate) {
+  state.pendingDuplicateTransaction = transaction;
+  els.duplicateSummary.textContent = `${formatDate(transaction.date)} · ${money.format(
+    transaction.amount,
+  )} · ${getPaymentMethodName(transaction.paymentMethodId)}`;
+  els.duplicateDetail.textContent = `มีรายการเดิมอยู่แล้ว: ${
+    duplicate.note || duplicate.category
+  } (${duplicate.type === "income" ? "รายรับ" : "รายจ่าย"})`;
+  els.duplicateModal.hidden = false;
+  document.body.style.overflow = "hidden";
+  window.requestAnimationFrame(() => els.confirmDuplicateButton.focus());
+}
+
+function closeDuplicateTransactionModal() {
+  state.pendingDuplicateTransaction = null;
+  els.duplicateModal.hidden = true;
+  document.body.style.overflow = "";
+  window.requestAnimationFrame(() => els.amount.focus());
+}
+
+function confirmDuplicateTransaction() {
+  if (!state.pendingDuplicateTransaction) {
+    closeDuplicateTransactionModal();
+    return;
+  }
+
+  const transaction = state.pendingDuplicateTransaction;
+  state.pendingDuplicateTransaction = null;
+  els.duplicateModal.hidden = true;
+  document.body.style.overflow = "";
+  saveNewTransaction(transaction);
 }
 
 function getSelectedType() {
