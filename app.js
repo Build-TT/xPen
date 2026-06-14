@@ -28,6 +28,7 @@ const state = {
   transactions: loadTransactions(initialPaymentMethods, initialCategories),
   view: "dashboard",
   editingTransactionId: "",
+  activeCategoryType: "expense",
   filters: {
     month: getCurrentMonthKey(),
     type: "all",
@@ -79,6 +80,8 @@ const els = {
   categoryNameInput: document.querySelector("#categoryNameInput"),
   incomeCategoryList: document.querySelector("#incomeCategoryList"),
   expenseCategoryList: document.querySelector("#expenseCategoryList"),
+  categoryTabs: Array.from(document.querySelectorAll("[data-category-tab]")),
+  categoryPanels: Array.from(document.querySelectorAll("[data-category-panel]")),
   editModal: document.querySelector("#transactionEditModal"),
   editForm: document.querySelector("#editTransactionForm"),
   editTypeInputs: Array.from(document.querySelectorAll("input[name='editType']")),
@@ -113,6 +116,7 @@ function init() {
   syncCategoryOptions(getSelectedType());
   syncPaymentMethodOptions();
   bindEvents();
+  setCategoryTab(state.activeCategoryType);
   setActiveView(getInitialView(), false, false);
   render();
 }
@@ -163,6 +167,12 @@ function bindEvents() {
   els.resetButton.addEventListener("click", resetData);
   els.paymentMethodForm.addEventListener("submit", handlePaymentMethodSubmit);
   els.categoryForm.addEventListener("submit", handleCategorySubmit);
+  els.categoryTypeInput.addEventListener("change", () => {
+    setCategoryTab(els.categoryTypeInput.value, false);
+  });
+  els.categoryTabs.forEach((button) => {
+    button.addEventListener("click", () => setCategoryTab(button.dataset.categoryTab));
+  });
   els.editForm.addEventListener("submit", handleEditTransactionSubmit);
   els.closeEditButton.addEventListener("click", closeEditTransactionModal);
   els.cancelEditButton.addEventListener("click", closeEditTransactionModal);
@@ -551,8 +561,9 @@ function renderPaymentMethods() {
 }
 
 function renderCategories() {
-  renderCategoryList("income", els.incomeCategoryList);
   renderCategoryList("expense", els.expenseCategoryList);
+  renderCategoryList("income", els.incomeCategoryList);
+  updateCategoryTabUi();
 }
 
 function renderCategoryList(type, target) {
@@ -598,6 +609,28 @@ function renderCategoryList(type, target) {
   });
 }
 
+function setCategoryTab(type, syncForm = true) {
+  if (!isValidTransactionType(type)) return;
+
+  state.activeCategoryType = type;
+  if (syncForm) {
+    els.categoryTypeInput.value = type;
+  }
+  updateCategoryTabUi();
+}
+
+function updateCategoryTabUi() {
+  els.categoryTabs.forEach((button) => {
+    const isActive = button.dataset.categoryTab === state.activeCategoryType;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  });
+
+  els.categoryPanels.forEach((panel) => {
+    panel.hidden = panel.dataset.categoryPanel !== state.activeCategoryType;
+  });
+}
+
 function handleCategorySubmit(event) {
   event.preventDefault();
   addCategory(els.categoryTypeInput.value, els.categoryNameInput.value);
@@ -613,8 +646,8 @@ function addCategory(type, name) {
   state.categories[type].push(normalizedName);
   persistCategories();
   syncCategoryOptions(getSelectedType());
-  els.categoryForm.reset();
-  els.categoryTypeInput.value = "expense";
+  setCategoryTab(type);
+  els.categoryNameInput.value = "";
   renderCategories();
 }
 

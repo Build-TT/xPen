@@ -376,14 +376,52 @@
                   </p>
                 </div>
               </div>
-              <div class="category-manager-grid">
-                <section aria-label="Income categories">
-                  <h2>รายรับ</h2>
-                  <div class="managed-list" id="incomeCategoryList"></div>
-                </section>
-                <section aria-label="Expense categories">
-                  <h2>รายจ่าย</h2>
+              <div class="category-tabs" role="tablist" aria-label="เลือกประเภทหมวดหมู่">
+                <button
+                  class="category-tab is-active"
+                  id="expenseCategoryTab"
+                  type="button"
+                  role="tab"
+                  aria-selected="true"
+                  aria-controls="expenseCategoryPanel"
+                  data-category-tab="expense"
+                >
+                  รายจ่าย
+                </button>
+                <button
+                  class="category-tab"
+                  id="incomeCategoryTab"
+                  type="button"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="incomeCategoryPanel"
+                  data-category-tab="income"
+                >
+                  รายรับ
+                </button>
+              </div>
+
+              <div class="category-tab-panels">
+                <section
+                  class="category-tab-panel"
+                  id="expenseCategoryPanel"
+                  role="tabpanel"
+                  aria-labelledby="expenseCategoryTab"
+                  data-category-panel="expense"
+                >
+                  <h2 class="sr-only">รายจ่าย</h2>
                   <div class="managed-list" id="expenseCategoryList"></div>
+                </section>
+                <section
+                  class="category-tab-panel"
+                  id="incomeCategoryPanel"
+                  role="tabpanel"
+                  aria-labelledby="incomeCategoryTab"
+                  data-category-panel="income"
+                  hidden
+                >
+                  <h2 class="sr-only">รายรับ</h2>
+                  <div class="managed-list" id="incomeCategoryList"></div>
                 </section>
               </div>
             </section>
