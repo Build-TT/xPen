@@ -1,21 +1,33 @@
 "use strict";
 
 const STORAGE_KEY = "xpen.transactions.v1";
+const PAYMENT_METHODS_KEY = "xpen.paymentMethods.v1";
 const CURRENCY = "THB";
 const MAX_IMPORT_BYTES = 1_000_000;
 const MAX_IMPORT_RECORDS = 5_000;
+const DEFAULT_PAYMENT_METHODS = [
+  { id: "cash", name: "เงินสด" },
+  { id: "bank-transfer", name: "โอนธนาคาร" },
+  { id: "promptpay", name: "PromptPay" },
+  { id: "credit-card", name: "บัตรเครดิต" },
+  { id: "wallet", name: "e-Wallet" },
+];
 
 const categories = {
   income: ["เงินเดือน", "ฟรีแลนซ์", "ลงทุน", "ของขวัญ", "อื่นๆ"],
   expense: ["อาหาร", "เดินทาง", "บ้าน", "สุขภาพ", "ช้อปปิ้ง", "บิล", "อื่นๆ"],
 };
 
+const initialPaymentMethods = loadPaymentMethods();
+
 const state = {
-  transactions: loadTransactions(),
+  paymentMethods: initialPaymentMethods,
+  transactions: loadTransactions(initialPaymentMethods),
   view: "dashboard",
   filters: {
     month: getCurrentMonthKey(),
     type: "all",
+    recordType: "all",
     search: "",
   },
 };
@@ -28,9 +40,11 @@ const els = {
   amount: document.querySelector("#amountInput"),
   date: document.querySelector("#dateInput"),
   category: document.querySelector("#categoryInput"),
+  paymentMethod: document.querySelector("#paymentMethodInput"),
   note: document.querySelector("#noteInput"),
   monthFilter: document.querySelector("#monthFilter"),
   typeFilter: document.querySelector("#typeFilter"),
+  recordTypeFilter: document.querySelector("#recordTypeFilter"),
   searchInput: document.querySelector("#searchInput"),
   balanceValue: document.querySelector("#balanceValue"),
   balanceHint: document.querySelector("#balanceHint"),
@@ -41,6 +55,7 @@ const els = {
   savingRateValue: document.querySelector("#savingRateValue"),
   categoryBreakdown: document.querySelector("#categoryBreakdown"),
   transactionList: document.querySelector("#transactionList"),
+  recordsList: document.querySelector("#recordsList"),
   emptyTemplate: document.querySelector("#emptyStateTemplate"),
   chart: document.querySelector("#monthChart"),
   exportJsonButton: document.querySelector("#exportJsonButton"),
@@ -55,6 +70,9 @@ const els = {
   entryTotalValue: document.querySelector("#entryTotalValue"),
   entrySavingValue: document.querySelector("#entrySavingValue"),
   recentPreview: document.querySelector("#recentPreview"),
+  paymentMethodForm: document.querySelector("#paymentMethodForm"),
+  paymentMethodNameInput: document.querySelector("#paymentMethodNameInput"),
+  paymentMethodList: document.querySelector("#paymentMethodList"),
 };
 
 const money = new Intl.NumberFormat("th-TH", {
@@ -77,6 +95,7 @@ function init() {
   state.filters.month = normalizeMonthKey(state.filters.month);
   els.monthFilter.value = state.filters.month;
   syncCategoryOptions(getSelectedType());
+  syncPaymentMethodOptions();
   bindEvents();
   setActiveView(getInitialView(), false, false);
   render();
@@ -108,9 +127,15 @@ function bindEvents() {
     renderTransactions();
   });
 
+  els.recordTypeFilter.addEventListener("change", () => {
+    state.filters.recordType = els.recordTypeFilter.value;
+    renderRecords();
+  });
+
   els.searchInput.addEventListener("input", () => {
     state.filters.search = els.searchInput.value.trim().toLowerCase();
     renderTransactions();
+    renderRecords();
   });
 
   els.exportJsonButton.addEventListener("click", exportJson);
@@ -118,6 +143,7 @@ function bindEvents() {
   els.importButton.addEventListener("click", () => els.importFile.click());
   els.importFile.addEventListener("change", importJson);
   els.resetButton.addEventListener("click", resetData);
+  els.paymentMethodForm.addEventListener("submit", handlePaymentMethodSubmit);
 }
 
 function handleSubmit(event) {
@@ -127,9 +153,10 @@ function handleSubmit(event) {
   const amount = Number.parseFloat(els.amount.value);
   const date = els.date.value;
   const category = els.category.value;
+  const paymentMethodId = els.paymentMethod.value;
   const note = els.note.value.trim();
 
-  if (!Number.isFinite(amount) || amount <= 0 || !date || !category) {
+  if (!Number.isFinite(amount) || amount <= 0 || !date || !category || !paymentMethodId) {
     els.amount.focus();
     return;
   }
@@ -140,15 +167,17 @@ function handleSubmit(event) {
     amount: roundMoney(amount),
     date,
     category,
+    paymentMethodId,
     note,
     createdAt: new Date().toISOString(),
   });
 
-  persist();
+  persistTransactions();
   els.form.reset();
   document.querySelector("input[name='type'][value='income']").checked = true;
   els.date.value = toDateInputValue(new Date());
   syncCategoryOptions("income");
+  syncPaymentMethodOptions();
   els.amount.focus();
   render();
 }
@@ -167,6 +196,22 @@ function syncCategoryOptions(type) {
   });
 }
 
+function syncPaymentMethodOptions(selectedId = els.paymentMethod.value) {
+  const fallbackId = getFallbackPaymentMethodId();
+  const nextSelectedId = state.paymentMethods.some((method) => method.id === selectedId)
+    ? selectedId
+    : fallbackId;
+
+  els.paymentMethod.replaceChildren();
+  state.paymentMethods.forEach((method) => {
+    const option = document.createElement("option");
+    option.value = method.id;
+    option.textContent = method.name;
+    option.selected = method.id === nextSelectedId;
+    els.paymentMethod.append(option);
+  });
+}
+
 function render() {
   renderSummary();
   if (state.view === "dashboard") {
@@ -174,8 +219,10 @@ function render() {
   }
   renderBreakdown();
   renderTransactions();
+  renderRecords();
   renderEntrySummary();
   renderRecentPreview();
+  renderPaymentMethods();
 }
 
 function renderSummary() {
@@ -365,38 +412,21 @@ function renderTransactions() {
   }
 
   transactions.forEach((item) => {
-    const row = document.createElement("article");
-    row.className = "transaction-row";
+    els.transactionList.append(createTransactionRow(item, { showDelete: true }));
+  });
+}
 
-    const icon = document.createElement("div");
-    icon.className = `type-icon ${item.type}`;
-    icon.textContent = item.type === "income" ? "+" : "-";
+function renderRecords() {
+  const records = getRecordTransactions();
+  els.recordsList.replaceChildren();
 
-    const main = document.createElement("div");
-    main.className = "transaction-main";
-    const title = document.createElement("strong");
-    title.textContent = item.note || item.category;
-    const meta = document.createElement("span");
-    meta.textContent = `${formatDate(item.date)} · ${item.category}`;
-    main.append(title, meta);
+  if (records.length === 0) {
+    els.recordsList.append(els.emptyTemplate.content.cloneNode(true));
+    return;
+  }
 
-    const amount = document.createElement("div");
-    amount.className = `transaction-amount ${item.type}`;
-    amount.textContent = `${item.type === "income" ? "+" : "-"}${money.format(
-      item.amount,
-    )}`;
-
-    const button = document.createElement("button");
-    button.className = "row-action";
-    button.type = "button";
-    button.setAttribute("aria-label", "Delete transaction");
-    button.dataset.id = item.id;
-    button.innerHTML =
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6m4-6v6"></path><path d="M6 7l1 13h10l1-13"></path><path d="M9 7V4h6v3"></path></svg>';
-    button.addEventListener("click", () => removeTransaction(item.id));
-
-    row.append(icon, main, amount, button);
-    els.transactionList.append(row);
+  records.forEach((item) => {
+    els.recordsList.append(createTransactionRow(item, { showDelete: true }));
   });
 }
 
@@ -423,34 +453,160 @@ function renderRecentPreview() {
   }
 
   recent.forEach((item) => {
-    const row = document.createElement("article");
-    row.className = "transaction-row";
-
-    const icon = document.createElement("div");
-    icon.className = `type-icon ${item.type}`;
-    icon.textContent = item.type === "income" ? "+" : "-";
-
-    const main = document.createElement("div");
-    main.className = "transaction-main";
-    const title = document.createElement("strong");
-    title.textContent = item.note || item.category;
-    const meta = document.createElement("span");
-    meta.textContent = `${formatDate(item.date)} · ${item.category}`;
-    main.append(title, meta);
-
-    const amount = document.createElement("div");
-    amount.className = `transaction-amount ${item.type}`;
-    amount.textContent = `${item.type === "income" ? "+" : "-"}${money.format(
-      item.amount,
-    )}`;
-
-    row.append(icon, main, amount);
-    els.recentPreview.append(row);
+    els.recentPreview.append(createTransactionRow(item, { showDelete: false }));
   });
 }
 
+function renderPaymentMethods() {
+  els.paymentMethodList.replaceChildren();
+
+  state.paymentMethods.forEach((method) => {
+    const usageCount = countTransactionsByPaymentMethod(method.id);
+    const row = document.createElement("article");
+    row.className = "method-row";
+
+    const input = document.createElement("input");
+    input.className = "method-name-input";
+    input.value = method.name;
+    input.maxLength = 40;
+    input.setAttribute("aria-label", `Rename ${method.name}`);
+
+    const usage = document.createElement("span");
+    usage.className = "method-usage";
+    usage.textContent = `${usageCount} รายการ`;
+
+    const actions = document.createElement("div");
+    actions.className = "method-actions";
+
+    const save = document.createElement("button");
+    save.className = "text-button";
+    save.type = "button";
+    save.textContent = "Save";
+    save.addEventListener("click", () => renamePaymentMethod(method.id, input.value));
+
+    const remove = document.createElement("button");
+    remove.className = "text-button danger";
+    remove.type = "button";
+    remove.textContent = "Delete";
+    remove.disabled = usageCount > 0 || state.paymentMethods.length === 1;
+    remove.title = remove.disabled
+      ? "ลบได้เฉพาะวิธีที่ยังไม่ถูกใช้ และต้องเหลืออย่างน้อย 1 วิธี"
+      : "";
+    remove.addEventListener("click", () => removePaymentMethod(method.id));
+
+    actions.append(save, remove);
+    row.append(input, usage, actions);
+    els.paymentMethodList.append(row);
+  });
+}
+
+function handlePaymentMethodSubmit(event) {
+  event.preventDefault();
+  addPaymentMethod(els.paymentMethodNameInput.value);
+}
+
+function addPaymentMethod(name) {
+  const normalizedName = normalizePaymentMethodName(name);
+  if (!normalizedName || isDuplicatePaymentMethodName(normalizedName)) {
+    els.paymentMethodNameInput.focus();
+    return;
+  }
+
+  const method = {
+    id: createId(),
+    name: normalizedName,
+  };
+
+  state.paymentMethods.push(method);
+  persistPaymentMethods();
+  syncPaymentMethodOptions(method.id);
+  els.paymentMethodForm.reset();
+  renderPaymentMethods();
+}
+
+function renamePaymentMethod(id, name) {
+  const normalizedName = normalizePaymentMethodName(name);
+  const method = state.paymentMethods.find((item) => item.id === id);
+
+  if (
+    !method ||
+    !normalizedName ||
+    isDuplicatePaymentMethodName(normalizedName, id)
+  ) {
+    renderPaymentMethods();
+    return;
+  }
+
+  method.name = normalizedName;
+  persistPaymentMethods();
+  syncPaymentMethodOptions(id);
+  render();
+}
+
+function removePaymentMethod(id) {
+  if (
+    state.paymentMethods.length === 1 ||
+    countTransactionsByPaymentMethod(id) > 0
+  ) {
+    renderPaymentMethods();
+    return;
+  }
+
+  state.paymentMethods = state.paymentMethods.filter((method) => method.id !== id);
+  persistPaymentMethods();
+  syncPaymentMethodOptions();
+  render();
+}
+
+function createTransactionRow(item, options = {}) {
+  const row = document.createElement("article");
+  row.className = "transaction-row";
+
+  const icon = document.createElement("div");
+  icon.className = `type-icon ${item.type}`;
+  icon.textContent = item.type === "income" ? "+" : "-";
+
+  const main = document.createElement("div");
+  main.className = "transaction-main";
+  const title = document.createElement("strong");
+  title.textContent = item.note || item.category;
+
+  const meta = document.createElement("span");
+  meta.className = "transaction-meta-line";
+  const metaText = document.createElement("span");
+  metaText.textContent = `${formatDate(item.date)} · ${item.category}`;
+  const method = document.createElement("span");
+  method.className = "payment-chip";
+  method.textContent = getPaymentMethodName(item.paymentMethodId);
+  meta.append(metaText, method);
+  main.append(title, meta);
+
+  const amount = document.createElement("div");
+  amount.className = `transaction-amount ${item.type}`;
+  amount.textContent = `${item.type === "income" ? "+" : "-"}${money.format(
+    item.amount,
+  )}`;
+
+  row.append(icon, main, amount);
+
+  if (options.showDelete) {
+    const button = document.createElement("button");
+    button.className = "row-action";
+    button.type = "button";
+    button.setAttribute("aria-label", "Delete transaction");
+    button.dataset.id = item.id;
+    button.innerHTML =
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6m4-6v6"></path><path d="M6 7l1 13h10l1-13"></path><path d="M9 7V4h6v3"></path></svg>';
+    button.addEventListener("click", () => removeTransaction(item.id));
+    row.append(button);
+  }
+
+  return row;
+}
+
 function setActiveView(viewName, updateHash = true, moveFocus = true) {
-  const nextView = viewName === "entry" ? "entry" : "dashboard";
+  const validViews = new Set(["dashboard", "entry", "records", "payments"]);
+  const nextView = validViews.has(viewName) ? viewName : "dashboard";
   state.view = nextView;
   let activePanel = null;
 
@@ -475,8 +631,7 @@ function setActiveView(viewName, updateHash = true, moveFocus = true) {
     window.requestAnimationFrame(renderChart);
   }
 
-  els.viewAnnouncer.textContent =
-    nextView === "dashboard" ? "Dashboard view opened" : "Add entry view opened";
+  els.viewAnnouncer.textContent = `${getViewLabel(nextView)} view opened`;
 
   if (moveFocus && activePanel) {
     window.requestAnimationFrame(() => activePanel.focus({ preventScroll: true }));
@@ -484,7 +639,10 @@ function setActiveView(viewName, updateHash = true, moveFocus = true) {
 }
 
 function getInitialView() {
-  return window.location.hash === "#entry" ? "entry" : "dashboard";
+  const view = window.location.hash.replace("#", "");
+  return ["dashboard", "entry", "records", "payments"].includes(view)
+    ? view
+    : "dashboard";
 }
 
 function getMonthTransactions() {
@@ -501,7 +659,23 @@ function getFilteredTransactions() {
   return getMonthTransactions().filter((item) => {
     const matchesType =
       state.filters.type === "all" || item.type === state.filters.type;
-    const haystack = `${item.category} ${item.note} ${item.amount}`.toLowerCase();
+    const haystack = `${item.category} ${item.note} ${item.amount} ${getPaymentMethodName(
+      item.paymentMethodId,
+    )}`.toLowerCase();
+    const matchesSearch =
+      state.filters.search.length === 0 ||
+      haystack.includes(state.filters.search);
+    return matchesType && matchesSearch;
+  });
+}
+
+function getRecordTransactions() {
+  return getMonthTransactions().filter((item) => {
+    const matchesType =
+      state.filters.recordType === "all" || item.type === state.filters.recordType;
+    const haystack = `${item.category} ${item.note} ${item.amount} ${getPaymentMethodName(
+      item.paymentMethodId,
+    )}`.toLowerCase();
     const matchesSearch =
       state.filters.search.length === 0 ||
       haystack.includes(state.filters.search);
@@ -517,7 +691,7 @@ function sumByType(transactions, type) {
 
 function removeTransaction(id) {
   state.transactions = state.transactions.filter((item) => item.id !== id);
-  persist();
+  persistTransactions();
   render();
 }
 
@@ -526,15 +700,19 @@ function resetData() {
   if (!confirmed) return;
 
   state.transactions = [];
-  persist();
+  state.paymentMethods = cloneDefaultPaymentMethods();
+  persistTransactions();
+  persistPaymentMethods();
+  syncPaymentMethodOptions();
   render();
 }
 
 function exportJson() {
   const payload = {
     app: "xPen",
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
+    paymentMethods: state.paymentMethods,
     transactions: state.transactions,
   };
 
@@ -547,11 +725,12 @@ function exportJson() {
 
 function exportCsv() {
   const rows = [
-    ["date", "type", "category", "amount", "note"],
+    ["date", "type", "category", "payment_method", "amount", "note"],
     ...state.transactions.map((item) => [
       item.date,
       item.type,
       item.category,
+      getPaymentMethodName(item.paymentMethodId),
       item.amount,
       item.note,
     ]),
@@ -587,6 +766,12 @@ function importJson(event) {
         throw new Error("Too many records");
       }
 
+      const importedMethods = Array.isArray(payload?.paymentMethods)
+        ? ensureUniquePaymentMethods(
+            payload.paymentMethods.map(normalizePaymentMethod).filter(Boolean),
+          )
+        : state.paymentMethods;
+
       const confirmed =
         state.transactions.length === 0 ||
         window.confirm(
@@ -595,14 +780,18 @@ function importJson(event) {
 
       if (!confirmed) return;
 
+      state.paymentMethods =
+        importedMethods.length > 0 ? importedMethods : cloneDefaultPaymentMethods();
       state.transactions = ensureUniqueTransactionIds(
         transactions
-        .map(normalizeTransaction)
+        .map((item) => normalizeTransaction(item, state.paymentMethods))
         .filter(Boolean)
           .sort((a, b) => b.date.localeCompare(a.date)),
       );
 
-      persist();
+      persistTransactions();
+      persistPaymentMethods();
+      syncPaymentMethodOptions();
       render();
     } catch (error) {
       window.alert("ไฟล์นี้นำเข้าไม่ได้ กรุณาตรวจสอบว่าเป็น JSON ของ xPen");
@@ -613,10 +802,15 @@ function importJson(event) {
   reader.readAsText(file);
 }
 
-function normalizeTransaction(item) {
+function normalizeTransaction(item, methods = DEFAULT_PAYMENT_METHODS) {
   const type = item?.type;
   const amount = Number.parseFloat(item?.amount);
   const date = typeof item?.date === "string" ? item.date.slice(0, 10) : "";
+  const methodIds = new Set(methods.map((method) => method.id));
+  const paymentMethodId =
+    typeof item?.paymentMethodId === "string" && methodIds.has(item.paymentMethodId)
+      ? item.paymentMethodId
+      : getFallbackPaymentMethodId(methods);
 
   if (
     (type !== "income" && type !== "expense") ||
@@ -638,6 +832,7 @@ function normalizeTransaction(item) {
         : categories[type][0],
     note:
       typeof item.note === "string" ? item.note.trim().slice(0, 80) : "",
+    paymentMethodId,
     createdAt:
       typeof item.createdAt === "string"
         ? item.createdAt
@@ -645,23 +840,48 @@ function normalizeTransaction(item) {
   };
 }
 
-function loadTransactions() {
+function loadTransactions(methods = DEFAULT_PAYMENT_METHODS) {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return ensureUniqueTransactionIds(parsed.map(normalizeTransaction).filter(Boolean));
+    return ensureUniqueTransactionIds(
+      parsed.map((item) => normalizeTransaction(item, methods)).filter(Boolean),
+    );
   } catch {
     return [];
   }
 }
 
-function persist() {
+function loadPaymentMethods() {
+  try {
+    const raw = localStorage.getItem(PAYMENT_METHODS_KEY);
+    if (!raw) return cloneDefaultPaymentMethods();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return cloneDefaultPaymentMethods();
+    const methods = ensureUniquePaymentMethods(
+      parsed.map(normalizePaymentMethod).filter(Boolean),
+    );
+    return methods.length > 0 ? methods : cloneDefaultPaymentMethods();
+  } catch {
+    return cloneDefaultPaymentMethods();
+  }
+}
+
+function persistTransactions() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.transactions));
   } catch {
     window.alert("บันทึกข้อมูลไม่ได้ พื้นที่จัดเก็บของ browser อาจเต็ม");
+  }
+}
+
+function persistPaymentMethods() {
+  try {
+    localStorage.setItem(PAYMENT_METHODS_KEY, JSON.stringify(state.paymentMethods));
+  } catch {
+    window.alert("บันทึกวิธีการจ่ายไม่ได้ พื้นที่จัดเก็บของ browser อาจเต็ม");
   }
 }
 
@@ -800,6 +1020,84 @@ function ensureUniqueTransactionIds(transactions) {
     seen.add(id);
     return { ...item, id };
   });
+}
+
+function cloneDefaultPaymentMethods() {
+  return DEFAULT_PAYMENT_METHODS.map((method) => ({ ...method }));
+}
+
+function normalizePaymentMethod(item) {
+  const id = typeof item?.id === "string" && item.id.trim()
+    ? item.id.trim().slice(0, 80)
+    : createId();
+  const name = normalizePaymentMethodName(item?.name);
+
+  if (!name) {
+    return null;
+  }
+
+  return { id, name };
+}
+
+function ensureUniquePaymentMethods(methods) {
+  const seenIds = new Set();
+  const seenNames = new Set();
+  const unique = [];
+
+  methods.forEach((method) => {
+    let id = method.id;
+    while (!id || seenIds.has(id)) {
+      id = createId();
+    }
+
+    const nameKey = method.name.toLowerCase();
+    if (seenNames.has(nameKey)) {
+      return;
+    }
+
+    seenIds.add(id);
+    seenNames.add(nameKey);
+    unique.push({ id, name: method.name });
+  });
+
+  return unique;
+}
+
+function normalizePaymentMethodName(name) {
+  return typeof name === "string" ? name.trim().replace(/\s+/g, " ").slice(0, 40) : "";
+}
+
+function isDuplicatePaymentMethodName(name, currentId = "") {
+  const nameKey = name.toLowerCase();
+  return state.paymentMethods.some(
+    (method) => method.id !== currentId && method.name.toLowerCase() === nameKey,
+  );
+}
+
+function getPaymentMethodName(id) {
+  return (
+    state.paymentMethods.find((method) => method.id === id)?.name ||
+    state.paymentMethods[0]?.name ||
+    DEFAULT_PAYMENT_METHODS[0].name
+  );
+}
+
+function getFallbackPaymentMethodId(methods = null) {
+  const source = methods || state.paymentMethods || DEFAULT_PAYMENT_METHODS;
+  return source[0]?.id || DEFAULT_PAYMENT_METHODS[0].id;
+}
+
+function countTransactionsByPaymentMethod(id) {
+  return state.transactions.filter((item) => item.paymentMethodId === id).length;
+}
+
+function getViewLabel(view) {
+  return {
+    dashboard: "Dashboard",
+    entry: "Add entry",
+    records: "Records",
+    payments: "Payment methods",
+  }[view] || "Dashboard";
 }
 
 function isValidMonthKey(monthKey) {

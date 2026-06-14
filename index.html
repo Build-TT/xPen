@@ -45,6 +45,12 @@
           <button class="nav-link" type="button" data-view="entry">
             Add Entry
           </button>
+          <button class="nav-link" type="button" data-view="records">
+            Records
+          </button>
+          <button class="nav-link" type="button" data-view="payments">
+            Payment Methods
+          </button>
         </nav>
 
         <label class="search-pill" aria-label="Search transactions">
@@ -297,6 +303,11 @@
                 </div>
 
                 <label class="field">
+                  <span>วิธีการจ่าย</span>
+                  <select id="paymentMethodInput" name="paymentMethod"></select>
+                </label>
+
+                <label class="field">
                   <span>โน้ต</span>
                   <input
                     id="noteInput"
@@ -341,6 +352,91 @@
                   </div>
                 </div>
                 <div class="recent-list" id="recentPreview"></div>
+              </section>
+            </aside>
+          </div>
+        </section>
+
+        <section
+          id="recordsView"
+          class="view view-records"
+          data-view-panel="records"
+          aria-label="Manage records"
+          tabindex="-1"
+          hidden
+        >
+          <section class="records-panel neumorphic" aria-label="Manage income and expense records">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Records</p>
+                <h1>จัดการรายการ</h1>
+                <p class="section-subtitle">
+                  ดูและลบรายการรายรับรายจ่ายตามเดือนที่เลือก
+                </p>
+              </div>
+              <div class="record-tools">
+                <label class="field compact-field">
+                  <span>ประเภท</span>
+                  <select id="recordTypeFilter" aria-label="Filter records by type">
+                    <option value="all">ทั้งหมด</option>
+                    <option value="income">รายรับ</option>
+                    <option value="expense">รายจ่าย</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+            <div class="transaction-list records-list" id="recordsList"></div>
+          </section>
+        </section>
+
+        <section
+          id="paymentsView"
+          class="view view-payments"
+          data-view-panel="payments"
+          aria-label="Manage payment methods"
+          tabindex="-1"
+          hidden
+        >
+          <div class="payments-grid">
+            <section class="methods-panel neumorphic" aria-label="Payment method list">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Payment methods</p>
+                  <h1>จัดการวิธีการจ่าย</h1>
+                  <p class="section-subtitle">
+                    เพิ่ม เปลี่ยนชื่อ หรือลบวิธีการจ่ายที่ยังไม่ถูกใช้งาน
+                  </p>
+                </div>
+              </div>
+              <div class="method-list" id="paymentMethodList"></div>
+            </section>
+
+            <aside class="methods-side">
+              <section class="method-form-panel neumorphic" aria-label="Add payment method">
+                <div class="section-heading compact">
+                  <div>
+                    <p class="eyebrow">New method</p>
+                    <h2>เพิ่มวิธีการจ่าย</h2>
+                  </div>
+                </div>
+                <form id="paymentMethodForm" autocomplete="off">
+                  <label class="field">
+                    <span>ชื่อวิธีการจ่าย</span>
+                    <input
+                      id="paymentMethodNameInput"
+                      type="text"
+                      maxlength="40"
+                      placeholder="เช่น เงินสด, บัตรเครดิต, PromptPay"
+                      required
+                    />
+                  </label>
+                  <button class="primary-button" type="submit">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 5v14M5 12h14"></path>
+                    </svg>
+                    เพิ่มวิธีการจ่าย
+                  </button>
+                </form>
               </section>
             </aside>
           </div>
