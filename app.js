@@ -2,6 +2,7 @@
 
 const STORAGE_KEY = "xpen.transactions.v1";
 const PAYMENT_METHODS_KEY = "xpen.paymentMethods.v1";
+const CATEGORIES_KEY = "xpen.categories.v1";
 const CURRENCY = "THB";
 const MAX_IMPORT_BYTES = 1_000_000;
 const MAX_IMPORT_RECORDS = 5_000;
@@ -13,21 +14,22 @@ const DEFAULT_PAYMENT_METHODS = [
   { id: "wallet", name: "e-Wallet" },
 ];
 
-const categories = {
+const DEFAULT_CATEGORIES = {
   income: ["เงินเดือน", "ฟรีแลนซ์", "ลงทุน", "ของขวัญ", "อื่นๆ"],
   expense: ["อาหาร", "เดินทาง", "บ้าน", "สุขภาพ", "ช้อปปิ้ง", "บิล", "อื่นๆ"],
 };
 
 const initialPaymentMethods = loadPaymentMethods();
+const initialCategories = loadCategories();
 
 const state = {
+  categories: initialCategories,
   paymentMethods: initialPaymentMethods,
-  transactions: loadTransactions(initialPaymentMethods),
+  transactions: loadTransactions(initialPaymentMethods, initialCategories),
   view: "dashboard",
   filters: {
     month: getCurrentMonthKey(),
     type: "all",
-    recordType: "all",
     search: "",
   },
 };
@@ -44,7 +46,6 @@ const els = {
   note: document.querySelector("#noteInput"),
   monthFilter: document.querySelector("#monthFilter"),
   typeFilter: document.querySelector("#typeFilter"),
-  recordTypeFilter: document.querySelector("#recordTypeFilter"),
   searchInput: document.querySelector("#searchInput"),
   balanceValue: document.querySelector("#balanceValue"),
   balanceHint: document.querySelector("#balanceHint"),
@@ -55,7 +56,6 @@ const els = {
   savingRateValue: document.querySelector("#savingRateValue"),
   categoryBreakdown: document.querySelector("#categoryBreakdown"),
   transactionList: document.querySelector("#transactionList"),
-  recordsList: document.querySelector("#recordsList"),
   emptyTemplate: document.querySelector("#emptyStateTemplate"),
   chart: document.querySelector("#monthChart"),
   exportJsonButton: document.querySelector("#exportJsonButton"),
@@ -73,6 +73,11 @@ const els = {
   paymentMethodForm: document.querySelector("#paymentMethodForm"),
   paymentMethodNameInput: document.querySelector("#paymentMethodNameInput"),
   paymentMethodList: document.querySelector("#paymentMethodList"),
+  categoryForm: document.querySelector("#categoryForm"),
+  categoryTypeInput: document.querySelector("#categoryTypeInput"),
+  categoryNameInput: document.querySelector("#categoryNameInput"),
+  incomeCategoryList: document.querySelector("#incomeCategoryList"),
+  expenseCategoryList: document.querySelector("#expenseCategoryList"),
 };
 
 const money = new Intl.NumberFormat("th-TH", {
@@ -113,7 +118,9 @@ function bindEvents() {
   });
 
   els.typeInputs.forEach((input) => {
-    input.addEventListener("change", () => syncCategoryOptions(input.value));
+    input.addEventListener("change", () => {
+      if (input.checked) syncCategoryOptions(input.value);
+    });
   });
 
   els.monthFilter.addEventListener("change", () => {
@@ -127,15 +134,9 @@ function bindEvents() {
     renderTransactions();
   });
 
-  els.recordTypeFilter.addEventListener("change", () => {
-    state.filters.recordType = els.recordTypeFilter.value;
-    renderRecords();
-  });
-
   els.searchInput.addEventListener("input", () => {
     state.filters.search = els.searchInput.value.trim().toLowerCase();
     renderTransactions();
-    renderRecords();
   });
 
   els.exportJsonButton.addEventListener("click", exportJson);
@@ -144,6 +145,7 @@ function bindEvents() {
   els.importFile.addEventListener("change", importJson);
   els.resetButton.addEventListener("click", resetData);
   els.paymentMethodForm.addEventListener("submit", handlePaymentMethodSubmit);
+  els.categoryForm.addEventListener("submit", handleCategorySubmit);
 }
 
 function handleSubmit(event) {
@@ -174,9 +176,9 @@ function handleSubmit(event) {
 
   persistTransactions();
   els.form.reset();
-  document.querySelector("input[name='type'][value='income']").checked = true;
+  document.querySelector("input[name='type'][value='expense']").checked = true;
   els.date.value = toDateInputValue(new Date());
-  syncCategoryOptions("income");
+  syncCategoryOptions("expense");
   syncPaymentMethodOptions();
   els.amount.focus();
   render();
@@ -188,7 +190,7 @@ function getSelectedType() {
 
 function syncCategoryOptions(type) {
   els.category.replaceChildren();
-  categories[type].forEach((category) => {
+  state.categories[type].forEach((category) => {
     const option = document.createElement("option");
     option.value = category;
     option.textContent = category;
@@ -219,10 +221,10 @@ function render() {
   }
   renderBreakdown();
   renderTransactions();
-  renderRecords();
   renderEntrySummary();
   renderRecentPreview();
   renderPaymentMethods();
+  renderCategories();
 }
 
 function renderSummary() {
@@ -416,20 +418,6 @@ function renderTransactions() {
   });
 }
 
-function renderRecords() {
-  const records = getRecordTransactions();
-  els.recordsList.replaceChildren();
-
-  if (records.length === 0) {
-    els.recordsList.append(els.emptyTemplate.content.cloneNode(true));
-    return;
-  }
-
-  records.forEach((item) => {
-    els.recordsList.append(createTransactionRow(item, { showDelete: true }));
-  });
-}
-
 function renderEntrySummary() {
   const monthly = getCurrentMonthTransactions();
   const income = sumByType(monthly, "income");
@@ -498,6 +486,116 @@ function renderPaymentMethods() {
     row.append(input, usage, actions);
     els.paymentMethodList.append(row);
   });
+}
+
+function renderCategories() {
+  renderCategoryList("income", els.incomeCategoryList);
+  renderCategoryList("expense", els.expenseCategoryList);
+}
+
+function renderCategoryList(type, target) {
+  target.replaceChildren();
+
+  state.categories[type].forEach((category) => {
+    const usageCount = countTransactionsByCategory(type, category);
+    const row = document.createElement("article");
+    row.className = "method-row";
+
+    const input = document.createElement("input");
+    input.className = "method-name-input";
+    input.value = category;
+    input.maxLength = 40;
+    input.setAttribute("aria-label", `Rename ${category}`);
+
+    const usage = document.createElement("span");
+    usage.className = "method-usage";
+    usage.textContent = `${usageCount} รายการ`;
+
+    const actions = document.createElement("div");
+    actions.className = "method-actions";
+
+    const save = document.createElement("button");
+    save.className = "text-button";
+    save.type = "button";
+    save.textContent = "Save";
+    save.addEventListener("click", () => renameCategory(type, category, input.value));
+
+    const remove = document.createElement("button");
+    remove.className = "text-button danger";
+    remove.type = "button";
+    remove.textContent = "Delete";
+    remove.disabled = usageCount > 0 || state.categories[type].length === 1;
+    remove.title = remove.disabled
+      ? "ลบได้เฉพาะหมวดหมู่ที่ยังไม่ถูกใช้ และต้องเหลืออย่างน้อย 1 หมวด"
+      : "";
+    remove.addEventListener("click", () => removeCategory(type, category));
+
+    actions.append(save, remove);
+    row.append(input, usage, actions);
+    target.append(row);
+  });
+}
+
+function handleCategorySubmit(event) {
+  event.preventDefault();
+  addCategory(els.categoryTypeInput.value, els.categoryNameInput.value);
+}
+
+function addCategory(type, name) {
+  const normalizedName = normalizeCategoryName(name);
+  if (!isValidTransactionType(type) || !normalizedName || isDuplicateCategory(type, normalizedName)) {
+    els.categoryNameInput.focus();
+    return;
+  }
+
+  state.categories[type].push(normalizedName);
+  persistCategories();
+  syncCategoryOptions(getSelectedType());
+  els.categoryForm.reset();
+  els.categoryTypeInput.value = "expense";
+  renderCategories();
+}
+
+function renameCategory(type, oldName, newName) {
+  const normalizedName = normalizeCategoryName(newName);
+  if (
+    !isValidTransactionType(type) ||
+    !normalizedName ||
+    (normalizedName !== oldName && isDuplicateCategory(type, normalizedName))
+  ) {
+    renderCategories();
+    return;
+  }
+
+  const index = state.categories[type].indexOf(oldName);
+  if (index < 0) return;
+
+  state.categories[type][index] = normalizedName;
+  state.transactions.forEach((item) => {
+    if (item.type === type && item.category === oldName) {
+      item.category = normalizedName;
+    }
+  });
+  persistCategories();
+  persistTransactions();
+  syncCategoryOptions(getSelectedType());
+  render();
+}
+
+function removeCategory(type, category) {
+  if (
+    !isValidTransactionType(type) ||
+    state.categories[type].length === 1 ||
+    countTransactionsByCategory(type, category) > 0
+  ) {
+    renderCategories();
+    return;
+  }
+
+  state.categories[type] = state.categories[type].filter((item) => item !== category);
+  persistCategories();
+  syncCategoryOptions(getSelectedType());
+  renderCategories();
 }
 
 function handlePaymentMethodSubmit(event) {
@@ -605,7 +703,7 @@ function createTransactionRow(item, options = {}) {
 }
 
 function setActiveView(viewName, updateHash = true, moveFocus = true) {
-  const validViews = new Set(["dashboard", "entry", "records", "payments"]);
+  const validViews = new Set(["dashboard", "entry", "categories", "payments"]);
   const nextView = validViews.has(viewName) ? viewName : "dashboard";
   state.view = nextView;
   let activePanel = null;
@@ -640,7 +738,7 @@ function setActiveView(viewName, updateHash = true, moveFocus = true) {
 
 function getInitialView() {
   const view = window.location.hash.replace("#", "");
-  return ["dashboard", "entry", "records", "payments"].includes(view)
+  return ["dashboard", "entry", "categories", "payments"].includes(view)
     ? view
     : "dashboard";
 }
@@ -669,20 +767,6 @@ function getFilteredTransactions() {
   });
 }
 
-function getRecordTransactions() {
-  return getMonthTransactions().filter((item) => {
-    const matchesType =
-      state.filters.recordType === "all" || item.type === state.filters.recordType;
-    const haystack = `${item.category} ${item.note} ${item.amount} ${getPaymentMethodName(
-      item.paymentMethodId,
-    )}`.toLowerCase();
-    const matchesSearch =
-      state.filters.search.length === 0 ||
-      haystack.includes(state.filters.search);
-    return matchesType && matchesSearch;
-  });
-}
-
 function sumByType(transactions, type) {
   return transactions
     .filter((item) => item.type === type)
@@ -700,9 +784,12 @@ function resetData() {
   if (!confirmed) return;
 
   state.transactions = [];
+  state.categories = cloneDefaultCategories();
   state.paymentMethods = cloneDefaultPaymentMethods();
   persistTransactions();
+  persistCategories();
   persistPaymentMethods();
+  syncCategoryOptions(getSelectedType());
   syncPaymentMethodOptions();
   render();
 }
@@ -712,6 +799,7 @@ function exportJson() {
     app: "xPen",
     version: 2,
     exportedAt: new Date().toISOString(),
+    categories: state.categories,
     paymentMethods: state.paymentMethods,
     transactions: state.transactions,
   };
@@ -771,6 +859,10 @@ function importJson(event) {
             payload.paymentMethods.map(normalizePaymentMethod).filter(Boolean),
           )
         : state.paymentMethods;
+      const importedCategories =
+        payload && typeof payload.categories === "object"
+          ? normalizeCategories(payload.categories)
+          : state.categories;
 
       const confirmed =
         state.transactions.length === 0 ||
@@ -782,15 +874,19 @@ function importJson(event) {
 
       state.paymentMethods =
         importedMethods.length > 0 ? importedMethods : cloneDefaultPaymentMethods();
+      state.categories = importedCategories;
       state.transactions = ensureUniqueTransactionIds(
         transactions
-        .map((item) => normalizeTransaction(item, state.paymentMethods))
+        .map((item) => normalizeTransaction(item, state.paymentMethods, state.categories))
         .filter(Boolean)
           .sort((a, b) => b.date.localeCompare(a.date)),
       );
+      mergeTransactionCategories(state.transactions);
 
       persistTransactions();
+      persistCategories();
       persistPaymentMethods();
+      syncCategoryOptions(getSelectedType());
       syncPaymentMethodOptions();
       render();
     } catch (error) {
@@ -802,7 +898,11 @@ function importJson(event) {
   reader.readAsText(file);
 }
 
-function normalizeTransaction(item, methods = DEFAULT_PAYMENT_METHODS) {
+function normalizeTransaction(
+  item,
+  methods = DEFAULT_PAYMENT_METHODS,
+  categorySource = DEFAULT_CATEGORIES,
+) {
   const type = item?.type;
   const amount = Number.parseFloat(item?.amount);
   const date = typeof item?.date === "string" ? item.date.slice(0, 10) : "";
@@ -829,7 +929,7 @@ function normalizeTransaction(item, methods = DEFAULT_PAYMENT_METHODS) {
     category:
       typeof item.category === "string" && item.category.trim()
         ? item.category.trim().slice(0, 40)
-        : categories[type][0],
+        : (categorySource[type] || DEFAULT_CATEGORIES[type])[0],
     note:
       typeof item.note === "string" ? item.note.trim().slice(0, 80) : "",
     paymentMethodId,
@@ -840,14 +940,14 @@ function normalizeTransaction(item, methods = DEFAULT_PAYMENT_METHODS) {
   };
 }
 
-function loadTransactions(methods = DEFAULT_PAYMENT_METHODS) {
+function loadTransactions(methods = DEFAULT_PAYMENT_METHODS, categorySource = DEFAULT_CATEGORIES) {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return ensureUniqueTransactionIds(
-      parsed.map((item) => normalizeTransaction(item, methods)).filter(Boolean),
+      parsed.map((item) => normalizeTransaction(item, methods, categorySource)).filter(Boolean),
     );
   } catch {
     return [];
@@ -869,6 +969,17 @@ function loadPaymentMethods() {
   }
 }
 
+function loadCategories() {
+  try {
+    const raw = localStorage.getItem(CATEGORIES_KEY);
+    if (!raw) return cloneDefaultCategories();
+    const parsed = JSON.parse(raw);
+    return normalizeCategories(parsed);
+  } catch {
+    return cloneDefaultCategories();
+  }
+}
+
 function persistTransactions() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.transactions));
@@ -882,6 +993,14 @@ function persistPaymentMethods() {
     localStorage.setItem(PAYMENT_METHODS_KEY, JSON.stringify(state.paymentMethods));
   } catch {
     window.alert("บันทึกวิธีการจ่ายไม่ได้ พื้นที่จัดเก็บของ browser อาจเต็ม");
+  }
+}
+
+function persistCategories() {
+  try {
+    localStorage.setItem(CATEGORIES_KEY, JSON.stringify(state.categories));
+  } catch {
+    window.alert("บันทึกหมวดหมู่ไม่ได้ พื้นที่จัดเก็บของ browser อาจเต็ม");
   }
 }
 
@@ -1022,6 +1141,63 @@ function ensureUniqueTransactionIds(transactions) {
   });
 }
 
+function cloneDefaultCategories() {
+  return {
+    income: [...DEFAULT_CATEGORIES.income],
+    expense: [...DEFAULT_CATEGORIES.expense],
+  };
+}
+
+function normalizeCategories(value) {
+  const defaults = cloneDefaultCategories();
+  const next = { income: [], expense: [] };
+
+  ["income", "expense"].forEach((type) => {
+    const values = Array.isArray(value?.[type]) ? value[type] : defaults[type];
+    values.forEach((item) => {
+      const name = normalizeCategoryName(item);
+      if (name && !next[type].some((existing) => existing.toLowerCase() === name.toLowerCase())) {
+        next[type].push(name);
+      }
+    });
+
+    if (next[type].length === 0) {
+      next[type] = [...defaults[type]];
+    }
+  });
+
+  return next;
+}
+
+function normalizeCategoryName(name) {
+  return typeof name === "string" ? name.trim().replace(/\s+/g, " ").slice(0, 40) : "";
+}
+
+function isDuplicateCategory(type, name) {
+  const nameKey = name.toLowerCase();
+  return state.categories[type].some((category) => category.toLowerCase() === nameKey);
+}
+
+function countTransactionsByCategory(type, category) {
+  return state.transactions.filter(
+    (item) => item.type === type && item.category === category,
+  ).length;
+}
+
+function mergeTransactionCategories(transactions) {
+  transactions.forEach((item) => {
+    if (!isValidTransactionType(item.type)) return;
+    const category = normalizeCategoryName(item.category);
+    if (category && !isDuplicateCategory(item.type, category)) {
+      state.categories[item.type].push(category);
+    }
+  });
+}
+
+function isValidTransactionType(type) {
+  return type === "income" || type === "expense";
+}
+
 function cloneDefaultPaymentMethods() {
   return DEFAULT_PAYMENT_METHODS.map((method) => ({ ...method }));
 }
@@ -1095,7 +1271,7 @@ function getViewLabel(view) {
   return {
     dashboard: "Dashboard",
     entry: "Add entry",
-    records: "Records",
+    categories: "Categories",
     payments: "Payment methods",
   }[view] || "Dashboard";
 }

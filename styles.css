@@ -273,7 +273,8 @@ svg {
 
 .dashboard-grid,
 .entry-grid,
-.payments-grid {
+.payments-grid,
+.categories-grid {
   display: grid;
   gap: 16px;
 }
@@ -290,6 +291,10 @@ svg {
   grid-template-columns: minmax(0, 1fr) 340px;
 }
 
+.categories-grid {
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+
 .neumorphic,
 .hero-panel,
 .metric,
@@ -299,9 +304,10 @@ svg {
 .entry-panel,
 .mini-summary,
 .recent-panel,
-.records-panel,
+.categories-panel,
 .methods-panel,
-.method-form-panel {
+.method-form-panel,
+.category-form-panel {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -521,9 +527,10 @@ select:focus,
 .entry-panel,
 .mini-summary,
 .recent-panel,
-.records-panel,
+.categories-panel,
 .methods-panel,
-.method-form-panel {
+.method-form-panel,
+.category-form-panel {
   padding: 20px;
 }
 
@@ -554,10 +561,6 @@ select:focus,
   color: var(--muted);
   line-height: 1.6;
   font-weight: 500;
-}
-
-.record-tools {
-  min-width: 180px;
 }
 
 .compact-field {
@@ -829,6 +832,27 @@ form {
   gap: 10px;
 }
 
+.category-manager-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.category-manager-grid h2 {
+  margin-bottom: 12px;
+}
+
+.managed-list {
+  display: grid;
+  gap: 10px;
+}
+
+.categories-side {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
 .method-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -978,7 +1002,8 @@ form {
 
   .dashboard-grid,
   .entry-grid,
-  .payments-grid {
+  .payments-grid,
+  .categories-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1027,9 +1052,10 @@ form {
   .entry-panel,
   .mini-summary,
   .recent-panel,
-  .records-panel,
+  .categories-panel,
   .methods-panel,
-  .method-form-panel {
+  .method-form-panel,
+  .category-form-panel {
     padding: 16px;
   }
 
@@ -1058,9 +1084,12 @@ form {
     gap: 10px;
   }
 
-  .record-tools,
   .compact-field {
     width: 100%;
+  }
+
+  .category-manager-grid {
+    grid-template-columns: 1fr;
   }
 
   .transaction-row {

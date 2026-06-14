@@ -45,8 +45,8 @@
           <button class="nav-link" type="button" data-view="entry">
             Add Entry
           </button>
-          <button class="nav-link" type="button" data-view="records">
-            Records
+          <button class="nav-link" type="button" data-view="categories">
+            Categories
           </button>
           <button class="nav-link" type="button" data-view="payments">
             Payment Methods
@@ -268,11 +268,11 @@
                 <fieldset class="segmented-control">
                   <legend>ประเภท</legend>
                   <label>
-                    <input type="radio" name="type" value="income" checked />
+                    <input type="radio" name="type" value="income" />
                     <span>รายรับ</span>
                   </label>
                   <label>
-                    <input type="radio" name="type" value="expense" />
+                    <input type="radio" name="type" value="expense" checked />
                     <span>รายจ่าย</span>
                   </label>
                 </fieldset>
@@ -358,35 +358,72 @@
         </section>
 
         <section
-          id="recordsView"
-          class="view view-records"
-          data-view-panel="records"
-          aria-label="Manage records"
+          id="categoriesView"
+          class="view view-categories"
+          data-view-panel="categories"
+          aria-label="Manage categories"
           tabindex="-1"
           hidden
         >
-          <section class="records-panel neumorphic" aria-label="Manage income and expense records">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">Records</p>
-                <h1>จัดการรายการ</h1>
-                <p class="section-subtitle">
-                  ดูและลบรายการรายรับรายจ่ายตามเดือนที่เลือก
-                </p>
+          <div class="categories-grid">
+            <section class="categories-panel neumorphic" aria-label="Category list">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Categories</p>
+                  <h1>จัดการหมวดหมู่</h1>
+                  <p class="section-subtitle">
+                    เพิ่ม เปลี่ยนชื่อ หรือลบหมวดหมู่ที่ยังไม่ถูกใช้งาน
+                  </p>
+                </div>
               </div>
-              <div class="record-tools">
-                <label class="field compact-field">
-                  <span>ประเภท</span>
-                  <select id="recordTypeFilter" aria-label="Filter records by type">
-                    <option value="all">ทั้งหมด</option>
-                    <option value="income">รายรับ</option>
-                    <option value="expense">รายจ่าย</option>
-                  </select>
-                </label>
+              <div class="category-manager-grid">
+                <section aria-label="Income categories">
+                  <h2>รายรับ</h2>
+                  <div class="managed-list" id="incomeCategoryList"></div>
+                </section>
+                <section aria-label="Expense categories">
+                  <h2>รายจ่าย</h2>
+                  <div class="managed-list" id="expenseCategoryList"></div>
+                </section>
               </div>
-            </div>
-            <div class="transaction-list records-list" id="recordsList"></div>
-          </section>
+            </section>
+
+            <aside class="categories-side">
+              <section class="category-form-panel neumorphic" aria-label="Add category">
+                <div class="section-heading compact">
+                  <div>
+                    <p class="eyebrow">New category</p>
+                    <h2>เพิ่มหมวดหมู่</h2>
+                  </div>
+                </div>
+                <form id="categoryForm" autocomplete="off">
+                  <label class="field">
+                    <span>ประเภท</span>
+                    <select id="categoryTypeInput">
+                      <option value="expense">รายจ่าย</option>
+                      <option value="income">รายรับ</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>ชื่อหมวดหมู่</span>
+                    <input
+                      id="categoryNameInput"
+                      type="text"
+                      maxlength="40"
+                      placeholder="เช่น กาแฟ, ค่าสมาชิก, โบนัส"
+                      required
+                    />
+                  </label>
+                  <button class="primary-button" type="submit">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 5v14M5 12h14"></path>
+                    </svg>
+                    เพิ่มหมวดหมู่
+                  </button>
+                </form>
+              </section>
+            </aside>
+          </div>
         </section>
 
         <section
