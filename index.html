@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
@@ -28,8 +28,8 @@
             <path d="M29 18h4.5c2.5 0 4 1.5 4 3.6 0 2.2-1.5 3.7-4 3.7H29"></path>
           </svg>
           <span>
-            <strong>xPen</strong>
-            <small>Personal expenses</small>
+            <strong>The Money Things</strong>
+            <small>by xPen</small>
           </span>
         </a>
 
@@ -40,16 +40,16 @@
             data-view="dashboard"
             aria-current="page"
           >
-            Dashboard
+            หน้าหลัก
           </button>
           <button class="nav-link" type="button" data-view="entry">
-            Add Entry
+            เพิ่มรายการ
           </button>
           <button class="nav-link" type="button" data-view="categories">
-            Categories
+            หมวดหมู่
           </button>
           <button class="nav-link" type="button" data-view="payments">
-            Payment Methods
+            วิธีจ่าย
           </button>
         </nav>
 
@@ -126,14 +126,21 @@
           tabindex="-1"
         >
           <div class="dashboard-grid">
-            <section class="hero-panel neumorphic" aria-label="Financial summary">
+            <section class="hero-panel neumorphic playful-hero" aria-label="Financial summary">
               <div class="hero-copy">
-                <p class="eyebrow">Personal finance</p>
-                <h1>xPen Dashboard</h1>
+                <p class="eyebrow">The Money Things</p>
+                <h1>
+                  Design
+                  <span class="hero-arrow">→</span>
+                  <span class="money-word">Money</span>
+                </h1>
                 <p class="hero-subtitle">
-                  รายรับ รายจ่าย และเงินคงเหลือของเดือนนี้
+                  พื้นที่ออกแบบการเงิน เพื่อชีวิตที่เบาสบาย
                 </p>
                 <div class="hero-controls">
+                  <button class="primary-button hero-start-button" id="heroStartButton" type="button">
+                    เริ่มใช้งาน
+                  </button>
                   <div class="month-picker">
                     <label for="monthFilter">Month</label>
                     <input id="monthFilter" type="month" />
@@ -148,27 +155,40 @@
                 </div>
               </div>
 
-              <div class="balance-sculpture" aria-hidden="true">
-                <svg viewBox="0 0 320 320">
-                  <ellipse class="shadow" cx="165" cy="270" rx="92" ry="18"></ellipse>
-                  <path
-                    class="stone stone-green"
-                    d="M74 215c19-36 95-48 143-30 37 14 39 55 4 71-48 22-134 13-151-12-7-10-4-20 4-29Z"
-                  ></path>
-                  <path
-                    class="stone stone-pink"
-                    d="M90 158c25-28 101-36 141-13 31 18 24 56-13 68-50 17-126 11-143-13-9-14 2-30 15-42Z"
-                  ></path>
-                  <path
-                    class="stone stone-gold"
-                    d="M111 111c35-19 92-19 121 0 25 16 17 48-18 57-43 11-103 4-117-16-9-13 0-32 14-41Z"
-                  ></path>
-                  <path
-                    class="stone stone-cream"
-                    d="M133 65c29-16 75-12 96 9 19 20 8 48-23 55-35 7-76-5-87-26-8-15 1-31 14-38Z"
-                  ></path>
-                  <path class="shine" d="M111 177c23-18 67-23 97-12"></path>
-                  <path class="shine" d="M132 122c20-12 55-12 78-2"></path>
+              <div class="hero-art" aria-hidden="true">
+                <div class="doodle-card doodle-card-left">
+                  <svg viewBox="0 0 96 96">
+                    <path d="M48 16v14M22 31l10 10M74 31 64 41M24 69h48"></path>
+                    <path d="M35 69V48c0-9 6-17 13-17s13 8 13 17v21"></path>
+                    <path d="M32 69h32"></path>
+                  </svg>
+                </div>
+                <div class="floating-money-card floating-money-card-left">
+                  <span class="ring">25%</span>
+                  <div>
+                    <strong>สำรองฉุกเฉิน</strong>
+                    <small>20,000 / 80,000 บาท</small>
+                  </div>
+                </div>
+                <div class="floating-money-card floating-money-card-right">
+                  <div>
+                    <strong>ทริปพักใจ</strong>
+                    <small>5,000 / 6,000 บาท</small>
+                  </div>
+                  <span>83%</span>
+                </div>
+                <div class="pastel-card pastel-card-right">
+                  <span>฿</span>
+                </div>
+                <div class="smile-blob smile-blob-mint"></div>
+                <div class="smile-blob smile-blob-blue"></div>
+                <div class="smile-blob smile-blob-pink"></div>
+                <svg class="doodle-line doodle-line-left" viewBox="0 0 160 90">
+                  <path d="M8 62c28-35 55-52 75-51 13 1-25 37-10 42 17 5 45-18 79-10"></path>
+                </svg>
+                <svg class="doodle-line doodle-line-right" viewBox="0 0 120 80">
+                  <path d="M13 8c-1 29 9 45 31 48"></path>
+                  <path d="M44 56 31 45M44 56l-12 12"></path>
                 </svg>
               </div>
             </section>

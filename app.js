@@ -66,6 +66,7 @@ const els = {
   importButton: document.querySelector("#importButton"),
   importFile: document.querySelector("#importFile"),
   resetButton: document.querySelector("#resetButton"),
+  heroStartButton: document.querySelector("#heroStartButton"),
   chartSummary: document.querySelector("#chartSummary"),
   viewAnnouncer: document.querySelector("#viewAnnouncer"),
   entryBalanceValue: document.querySelector("#entryBalanceValue"),
@@ -138,6 +139,8 @@ function bindEvents() {
   els.navLinks.forEach((button) => {
     button.addEventListener("click", () => setActiveView(button.dataset.view));
   });
+
+  els.heroStartButton.addEventListener("click", () => setActiveView("entry"));
 
   els.typeInputs.forEach((input) => {
     input.addEventListener("change", () => {
