@@ -1487,24 +1487,6 @@ body {
   line-height: 0.98;
 }
 
-.hero-arrow {
-  font-size: 0.62em;
-  font-weight: 500;
-}
-
-.money-word {
-  color: var(--blue);
-}
-
-.money-word::after {
-  display: block;
-  width: 100%;
-  height: 12px;
-  margin-top: -2px;
-  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 280 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 16c54-9 122-14 274-12M34 23c78-11 136-14 199-12' fill='none' stroke='%23151515' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
-  content: "";
-}
-
 .hero-subtitle {
   max-width: 560px;
   color: var(--ink);
@@ -1541,220 +1523,6 @@ body {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-}
-
-.doodle-card,
-.pastel-card,
-.floating-money-card,
-.smile-blob,
-.doodle-line {
-  position: absolute;
-}
-
-.doodle-card {
-  display: grid;
-  width: 154px;
-  height: 190px;
-  place-items: center;
-  border-radius: 14px;
-  background: #ffeded;
-  box-shadow: 0 12px 28px rgba(20, 20, 20, 0.08);
-}
-
-.doodle-card svg {
-  width: 78px;
-  height: 78px;
-  fill: none;
-  stroke: #1f1f1f;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 3;
-}
-
-.doodle-card-left {
-  left: 0;
-  top: 24px;
-}
-
-.pastel-card {
-  display: grid;
-  width: 202px;
-  height: 246px;
-  place-items: center;
-  border-radius: 18px;
-  background: #f7aebe;
-  box-shadow: 0 18px 34px rgba(20, 20, 20, 0.1);
-  color: #ffffff;
-  font-size: 5rem;
-  font-weight: 700;
-  transform: rotate(-1deg);
-}
-
-.pastel-card-right {
-  right: 18px;
-  top: 56px;
-}
-
-.floating-money-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 230px;
-  min-height: 86px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 16px 32px rgba(20, 20, 20, 0.07);
-  padding: 14px 18px;
-}
-
-.floating-money-card strong,
-.floating-money-card small {
-  display: block;
-}
-
-.floating-money-card strong {
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.floating-money-card small {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 500;
-}
-
-.floating-money-card span {
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.floating-money-card-left {
-  left: 248px;
-  top: 94px;
-}
-
-.floating-money-card-right {
-  right: 170px;
-  top: 72px;
-}
-
-.ring {
-  display: grid;
-  width: 50px;
-  height: 50px;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 6px solid #e8e8e8;
-  border-top-color: #191919;
-  border-radius: 999px;
-}
-
-.smile-blob {
-  width: 74px;
-  height: 64px;
-  border-radius: 48% 52% 45% 55%;
-}
-
-.smile-blob::before,
-.smile-blob::after {
-  position: absolute;
-  top: 23px;
-  width: 5px;
-  height: 5px;
-  border-radius: 999px;
-  background: #171717;
-  content: "";
-}
-
-.smile-blob::before {
-  left: 25px;
-}
-
-.smile-blob::after {
-  right: 25px;
-}
-
-.smile-blob {
-  background: var(--mint);
-}
-
-.smile-blob::marker {
-  display: none;
-}
-
-.smile-blob-mint {
-  left: 56%;
-  top: 16px;
-}
-
-.smile-blob-blue {
-  left: -14px;
-  bottom: 196px;
-  background: var(--baby-blue);
-}
-
-.smile-blob-pink {
-  right: 294px;
-  bottom: 98px;
-  background: var(--pink);
-}
-
-.smile-blob::after {
-  box-shadow:
-    -18px 0 0 #171717,
-    -9px 17px 0 -2px transparent;
-}
-
-.smile-blob::before {
-  box-shadow: 22px 18px 0 -18px #171717;
-}
-
-.smile-blob::after,
-.smile-blob::before {
-  z-index: 1;
-}
-
-.smile-blob::selection {
-  background: transparent;
-}
-
-.smile-blob::before {
-  box-shadow: none;
-}
-
-.smile-blob::after {
-  box-shadow: none;
-}
-
-.smile-blob {
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 74 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M28 37c5 7 14 7 19 0' fill='none' stroke='%23151515' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 74px 64px;
-}
-
-.doodle-line {
-  width: 160px;
-  height: 90px;
-  fill: none;
-  stroke: #151515;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 4;
-}
-
-.doodle-line-left {
-  left: 64px;
-  top: 212px;
-}
-
-.doodle-line-right {
-  right: 190px;
-  top: 210px;
-  width: 120px;
-  height: 80px;
 }
 
 .neumorphic,
@@ -1855,25 +1623,6 @@ select,
   .playful-hero {
     min-height: 660px;
   }
-
-  .doodle-card-left {
-    left: 16px;
-    top: 44px;
-  }
-
-  .floating-money-card-left {
-    left: 205px;
-    top: 84px;
-  }
-
-  .floating-money-card-right {
-    right: 90px;
-  }
-
-  .pastel-card-right {
-    right: 0;
-    top: 315px;
-  }
 }
 
 @media (max-width: 760px) {
@@ -1930,25 +1679,379 @@ select,
     transform: none;
   }
 
-  .doodle-card,
-  .floating-money-card,
-  .pastel-card,
-  .doodle-line {
-    display: none;
+}
+
+/* xPen-specific playful direction: inspired mood, original layout */
+.brand strong {
+  font-size: clamp(1.25rem, 2.4vw, 1.75rem);
+  font-weight: 700;
+}
+
+.playful-hero {
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 480px);
+  gap: clamp(28px, 6vw, 80px);
+  align-items: center;
+  justify-items: stretch;
+  min-height: clamp(520px, 68vh, 700px);
+  padding: clamp(40px, 7vw, 78px) clamp(18px, 5vw, 64px);
+}
+
+.playful-hero::before {
+  left: auto;
+  right: 8%;
+  top: 10%;
+  bottom: auto;
+  width: 160px;
+  height: 160px;
+  background: #d8f7e7;
+}
+
+.playful-hero::after {
+  right: auto;
+  left: 8%;
+  bottom: 8%;
+  width: 118px;
+  height: 118px;
+  background: #d8efff;
+}
+
+.hero-copy {
+  align-content: center;
+  justify-items: start;
+  max-width: 630px;
+  text-align: left;
+}
+
+.hero-copy .eyebrow {
+  color: #2f7d45;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.hero-copy h1 {
+  display: grid;
+  gap: 14px;
+  justify-content: start;
+  font-size: clamp(3rem, 8vw, 6.2rem);
+  line-height: 0.96;
+}
+
+.brand-word {
+  color: #111111;
+  font-weight: 700;
+}
+
+.brand-word::after {
+  display: block;
+  width: 78%;
+  height: 13px;
+  margin-top: -2px;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 250 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 14c54-8 118-11 238-9M32 22c52-8 104-9 168-7' fill='none' stroke='%2369aeee' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E") left center / contain no-repeat;
+  content: "";
+}
+
+.hero-line {
+  max-width: 680px;
+  color: #171717;
+  font-size: clamp(2.1rem, 5vw, 4rem);
+  font-weight: 600;
+}
+
+.hero-subtitle {
+  max-width: 520px;
+  color: #3f3f3f;
+  font-size: clamp(1rem, 2vw, 1.28rem);
+  font-weight: 500;
+}
+
+.hero-controls {
+  justify-content: flex-start;
+  margin-top: 28px;
+}
+
+.hero-start-button {
+  order: 0;
+}
+
+.month-picker {
+  order: 1;
+}
+
+.hero-controls .soft-button {
+  order: 2;
+}
+
+.xpen-hero-art {
+  position: relative;
+  inset: auto;
+  width: min(100%, 480px);
+  min-height: 440px;
+  justify-self: end;
+}
+
+.xpen-preview-card,
+.xpen-wallet-card,
+.xpen-coin-stack,
+.xpen-doodle,
+.xpen-soft-blob {
+  position: absolute;
+}
+
+.xpen-preview-card {
+  display: grid;
+  gap: 5px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 20px 44px rgba(24, 24, 24, 0.08);
+  padding: 18px 20px;
+}
+
+.xpen-preview-card small {
+  color: #6b6b6b;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.xpen-preview-card strong {
+  color: #171717;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.xpen-preview-card span {
+  color: #2f7d45;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.xpen-preview-balance {
+  left: 6%;
+  top: 44px;
+  width: 220px;
+  transform: rotate(-3deg);
+}
+
+.xpen-preview-saving {
+  right: 0;
+  bottom: 54px;
+  display: flex;
+  width: 250px;
+  align-items: center;
+  gap: 14px;
+  transform: rotate(2deg);
+}
+
+.xpen-mini-ring {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 7px solid #ecedf0;
+  border-top-color: #69aeee;
+  border-radius: 999px;
+  color: #4a4a4a;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.xpen-wallet-card {
+  right: 54px;
+  top: 96px;
+  display: grid;
+  width: 230px;
+  height: 230px;
+  place-items: center;
+  border-radius: 34% 66% 45% 55%;
+  background: #ffd6df;
+  box-shadow: 0 24px 52px rgba(24, 24, 24, 0.1);
+}
+
+.xpen-wallet-card svg {
+  width: 126px;
+  height: 126px;
+  fill: #ffffff;
+  stroke: #151515;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 5;
+}
+
+.xpen-coin-stack {
+  left: 46px;
+  bottom: 64px;
+  width: 138px;
+  height: 112px;
+}
+
+.xpen-coin-stack span {
+  position: absolute;
+  display: block;
+  width: 112px;
+  height: 42px;
+  border: 3px solid #151515;
+  border-radius: 50%;
+  background: #fff1a9;
+  box-shadow: 0 10px 20px rgba(24, 24, 24, 0.06);
+}
+
+.xpen-coin-stack span:nth-child(1) {
+  left: 10px;
+  bottom: 0;
+}
+
+.xpen-coin-stack span:nth-child(2) {
+  left: 22px;
+  bottom: 30px;
+  background: #bfeedd;
+}
+
+.xpen-coin-stack span:nth-child(3) {
+  left: 0;
+  bottom: 60px;
+  background: #d8efff;
+}
+
+.xpen-doodle {
+  fill: none;
+  stroke: #151515;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.xpen-doodle-left {
+  left: 4px;
+  top: 170px;
+  width: 160px;
+  height: 86px;
+}
+
+.xpen-doodle-right {
+  right: 10px;
+  top: 18px;
+  width: 128px;
+  height: 92px;
+}
+
+.xpen-soft-blob {
+  border-radius: 52% 48% 45% 55%;
+  opacity: 0.92;
+}
+
+.xpen-blob-a {
+  left: 28%;
+  top: 2px;
+  width: 72px;
+  height: 62px;
+  background: #bfeedd;
+}
+
+.xpen-blob-b {
+  right: 4%;
+  bottom: 178px;
+  width: 60px;
+  height: 54px;
+  background: #d8efff;
+}
+
+.xpen-blob-c {
+  left: 0;
+  bottom: 190px;
+  width: 66px;
+  height: 58px;
+  background: #ffd6df;
+}
+
+@media (max-width: 1120px) {
+  .playful-hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
   }
 
-  .smile-blob-mint {
-    left: 72%;
-    top: 20px;
+  .hero-copy {
+    justify-items: center;
+    margin: 0 auto;
+    text-align: center;
   }
 
-  .smile-blob-blue {
+  .hero-copy h1 {
+    justify-content: center;
+  }
+
+  .brand-word::after {
+    margin-inline: auto;
+  }
+
+  .hero-controls {
+    justify-content: center;
+  }
+
+  .xpen-hero-art {
+    justify-self: center;
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 760px) {
+  .playful-hero {
+    min-height: auto;
+    padding-top: 44px;
+  }
+
+  .hero-copy h1 {
+    font-size: clamp(2.8rem, 18vw, 4.4rem);
+  }
+
+  .hero-line {
+    font-size: clamp(1.9rem, 10vw, 2.7rem);
+  }
+
+  .hero-controls {
+    margin-top: 24px;
+  }
+
+  .xpen-hero-art {
+    min-height: 300px;
+  }
+
+  .xpen-preview-card {
+    padding: 14px 16px;
+  }
+
+  .xpen-preview-balance {
     left: 0;
-    bottom: 110px;
+    top: 24px;
+    width: 190px;
   }
 
-  .smile-blob-pink {
-    right: 8px;
-    bottom: 86px;
+  .xpen-wallet-card {
+    right: 0;
+    top: 86px;
+    width: 154px;
+    height: 154px;
+  }
+
+  .xpen-wallet-card svg {
+    width: 86px;
+    height: 86px;
+  }
+
+  .xpen-preview-saving {
+    right: 0;
+    bottom: 0;
+    width: min(260px, 100%);
+  }
+
+  .xpen-coin-stack {
+    left: 12px;
+    bottom: 24px;
+    transform: scale(0.76);
+    transform-origin: left bottom;
+  }
+
+  .xpen-doodle,
+  .xpen-soft-blob {
+    display: none;
   }
 }
