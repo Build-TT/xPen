@@ -1500,6 +1500,14 @@ body {
   margin-top: 76px;
 }
 
+.sync-status {
+  min-height: 1.5em;
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 .hero-start-button {
   min-width: 170px;
   min-height: 58px;

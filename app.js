@@ -63,6 +63,9 @@ const els = {
   chart: document.querySelector("#monthChart"),
   exportJsonButton: document.querySelector("#exportJsonButton"),
   exportCsvButton: document.querySelector("#exportCsvButton"),
+  sheetsBackupButton: document.querySelector("#sheetsBackupButton"),
+  sheetsRestoreButton: document.querySelector("#sheetsRestoreButton"),
+  sheetsSyncStatus: document.querySelector("#sheetsSyncStatus"),
   importButton: document.querySelector("#importButton"),
   importFile: document.querySelector("#importFile"),
   resetButton: document.querySelector("#resetButton"),
@@ -172,6 +175,8 @@ function bindEvents() {
 
   els.exportJsonButton.addEventListener("click", exportJson);
   els.exportCsvButton.addEventListener("click", exportCsv);
+  els.sheetsBackupButton.addEventListener("click", backupToSheets);
+  els.sheetsRestoreButton.addEventListener("click", restoreFromSheets);
   els.importButton.addEventListener("click", () => els.importFile.click());
   els.importFile.addEventListener("change", importJson);
   els.resetButton.addEventListener("click", resetData);
@@ -1048,18 +1053,9 @@ function resetData() {
 }
 
 function exportJson() {
-  const payload = {
-    app: "xPen",
-    version: 2,
-    exportedAt: new Date().toISOString(),
-    categories: state.categories,
-    paymentMethods: state.paymentMethods,
-    transactions: state.transactions,
-  };
-
   downloadFile(
     `xpen-export-${toDateInputValue(new Date())}.json`,
-    JSON.stringify(payload, null, 2),
+    JSON.stringify(buildExportPayload(), null, 2),
     "application/json",
   );
 }
@@ -1095,53 +1091,10 @@ function importJson(event) {
   reader.addEventListener("load", () => {
     try {
       const payload = JSON.parse(String(reader.result));
-      const transactions = Array.isArray(payload)
-        ? payload
-        : payload.transactions;
-
-      if (!Array.isArray(transactions)) {
-        throw new Error("Invalid xPen file");
-      }
-
-      if (transactions.length > MAX_IMPORT_RECORDS) {
-        throw new Error("Too many records");
-      }
-
-      const importedMethods = Array.isArray(payload?.paymentMethods)
-        ? ensureUniquePaymentMethods(
-            payload.paymentMethods.map(normalizePaymentMethod).filter(Boolean),
-          )
-        : state.paymentMethods;
-      const importedCategories =
-        payload && typeof payload.categories === "object"
-          ? normalizeCategories(payload.categories)
-          : state.categories;
-
-      const confirmed =
-        state.transactions.length === 0 ||
-        window.confirm(
+      applyImportedPayload(payload, {
+        confirmMessage:
           "การนำเข้าจะแทนที่รายการทั้งหมดในเครื่องนี้ ต้องการดำเนินการต่อ?",
-        );
-
-      if (!confirmed) return;
-
-      state.paymentMethods =
-        importedMethods.length > 0 ? importedMethods : cloneDefaultPaymentMethods();
-      state.categories = importedCategories;
-      state.transactions = ensureUniqueTransactionIds(
-        transactions
-        .map((item) => normalizeTransaction(item, state.paymentMethods, state.categories))
-        .filter(Boolean)
-          .sort((a, b) => b.date.localeCompare(a.date)),
-      );
-      mergeTransactionCategories(state.transactions);
-
-      persistTransactions();
-      persistCategories();
-      persistPaymentMethods();
-      syncCategoryOptions(getSelectedType());
-      syncPaymentMethodOptions();
-      render();
+      });
     } catch (error) {
       window.alert("ไฟล์นี้นำเข้าไม่ได้ กรุณาตรวจสอบว่าเป็น JSON ของ xPen");
     } finally {
@@ -1149,6 +1102,147 @@ function importJson(event) {
     }
   });
   reader.readAsText(file);
+}
+
+async function backupToSheets() {
+  setSheetsSyncStatus("กำลังบันทึกลง Google Sheet...");
+  setSheetsButtonsDisabled(true);
+
+  try {
+    const response = await fetch("/api/sheets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        action: "backup",
+        payload: buildExportPayload(),
+      }),
+    });
+    const result = await readJsonResponse(response);
+
+    if (!response.ok || !result.ok) {
+      throw new Error(result.error || "Backup failed");
+    }
+
+    setSheetsSyncStatus(
+      `บันทึกลง Sheet แล้ว: ${state.transactions.length} รายการ`,
+    );
+  } catch (error) {
+    setSheetsSyncStatus(
+      "ยัง sync ไม่ได้ ตรวจ Vercel env และ Apps Script Web App URL",
+    );
+  } finally {
+    setSheetsButtonsDisabled(false);
+  }
+}
+
+async function restoreFromSheets() {
+  setSheetsSyncStatus("กำลังโหลดจาก Google Sheet...");
+  setSheetsButtonsDisabled(true);
+
+  try {
+    const response = await fetch("/api/sheets");
+    const result = await readJsonResponse(response);
+
+    if (!response.ok || !result.ok) {
+      throw new Error(result.error || "Restore failed");
+    }
+
+    const applied = applyImportedPayload(result.payload, {
+      confirmMessage:
+        "ข้อมูลจาก Google Sheet จะแทนที่รายการทั้งหมดในเครื่องนี้ ต้องการดำเนินการต่อ?",
+    });
+
+    setSheetsSyncStatus(
+      applied
+        ? `โหลดจาก Sheet แล้ว: ${state.transactions.length} รายการ`
+        : "ยกเลิกการโหลดจาก Sheet",
+    );
+  } catch (error) {
+    setSheetsSyncStatus(
+      "ยังโหลดไม่ได้ ตรวจ Vercel env และ Apps Script Web App URL",
+    );
+  } finally {
+    setSheetsButtonsDisabled(false);
+  }
+}
+
+function buildExportPayload() {
+  return {
+    app: "xPen",
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    categories: state.categories,
+    paymentMethods: state.paymentMethods,
+    transactions: state.transactions,
+  };
+}
+
+function applyImportedPayload(payload, options = {}) {
+  const transactions = Array.isArray(payload)
+    ? payload
+    : payload?.transactions;
+
+  if (!Array.isArray(transactions)) {
+    throw new Error("Invalid xPen payload");
+  }
+
+  if (transactions.length > MAX_IMPORT_RECORDS) {
+    throw new Error("Too many records");
+  }
+
+  const importedMethods = Array.isArray(payload?.paymentMethods)
+    ? ensureUniquePaymentMethods(
+        payload.paymentMethods.map(normalizePaymentMethod).filter(Boolean),
+      )
+    : state.paymentMethods;
+  const importedCategories =
+    payload && typeof payload.categories === "object"
+      ? normalizeCategories(payload.categories)
+      : state.categories;
+
+  const shouldConfirm = state.transactions.length > 0 && options.confirmMessage;
+  if (shouldConfirm && !window.confirm(options.confirmMessage)) {
+    return false;
+  }
+
+  state.paymentMethods =
+    importedMethods.length > 0 ? importedMethods : cloneDefaultPaymentMethods();
+  state.categories = importedCategories;
+  state.transactions = ensureUniqueTransactionIds(
+    transactions
+      .map((item) => normalizeTransaction(item, state.paymentMethods, state.categories))
+      .filter(Boolean)
+      .sort((a, b) => b.date.localeCompare(a.date)),
+  );
+  mergeTransactionCategories(state.transactions);
+
+  persistTransactions();
+  persistCategories();
+  persistPaymentMethods();
+  syncCategoryOptions(getSelectedType());
+  syncPaymentMethodOptions();
+  render();
+  return true;
+}
+
+async function readJsonResponse(response) {
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { ok: false, error: text };
+  }
+}
+
+function setSheetsButtonsDisabled(disabled) {
+  els.sheetsBackupButton.disabled = disabled;
+  els.sheetsRestoreButton.disabled = disabled;
+}
+
+function setSheetsSyncStatus(message) {
+  els.sheetsSyncStatus.textContent = message;
 }
 
 function normalizeTransaction(

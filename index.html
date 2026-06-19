@@ -151,7 +151,24 @@
                     </svg>
                     CSV
                   </button>
+                  <button class="soft-button" id="sheetsBackupButton" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 5v10m0 0 4-4m-4 4-4-4"></path>
+                      <path d="M5 19h14"></path>
+                    </svg>
+                    บันทึกลง Sheet
+                  </button>
+                  <button class="soft-button" id="sheetsRestoreButton" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 19V9m0 0 4 4m-4-4-4 4"></path>
+                      <path d="M5 5h14"></path>
+                    </svg>
+                    โหลดจาก Sheet
+                  </button>
                 </div>
+                <p class="sync-status" id="sheetsSyncStatus" role="status">
+                  Google Sheet sync พร้อมใช้หลังตั้งค่า Vercel env
+                </p>
               </div>
 
               <div class="hero-art xpen-hero-art" aria-hidden="true">
