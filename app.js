@@ -3,9 +3,11 @@
 const STORAGE_KEY = "xpen.transactions.v1";
 const PAYMENT_METHODS_KEY = "xpen.paymentMethods.v1";
 const CATEGORIES_KEY = "xpen.categories.v1";
+const LANGUAGE_KEY = "xpen.language.v1";
 const CURRENCY = "THB";
 const MAX_IMPORT_BYTES = 1_000_000;
 const MAX_IMPORT_RECORDS = 5_000;
+const LANGUAGES = ["th", "en"];
 const DEFAULT_PAYMENT_METHODS = [
   { id: "cash", name: "เงินสด" },
   { id: "bank-transfer", name: "โอนธนาคาร" },
@@ -19,10 +21,281 @@ const DEFAULT_CATEGORIES = {
   expense: ["อาหาร", "เดินทาง", "บ้าน", "สุขภาพ", "ช้อปปิ้ง", "บิล", "อื่นๆ"],
 };
 
+const BUILT_IN_LABELS = {
+  "เงินสด": { th: "เงินสด", en: "Cash" },
+  "Cash": { th: "เงินสด", en: "Cash" },
+  "โอนธนาคาร": { th: "โอนธนาคาร", en: "Bank transfer" },
+  "Bank transfer": { th: "โอนธนาคาร", en: "Bank transfer" },
+  "บัตรเครดิต": { th: "บัตรเครดิต", en: "Credit card" },
+  "Credit card": { th: "บัตรเครดิต", en: "Credit card" },
+  "เงินเดือน": { th: "เงินเดือน", en: "Salary" },
+  "Salary": { th: "เงินเดือน", en: "Salary" },
+  "ฟรีแลนซ์": { th: "ฟรีแลนซ์", en: "Freelance" },
+  "Freelance": { th: "ฟรีแลนซ์", en: "Freelance" },
+  "ลงทุน": { th: "ลงทุน", en: "Investment" },
+  "Investment": { th: "ลงทุน", en: "Investment" },
+  "ของขวัญ": { th: "ของขวัญ", en: "Gift" },
+  "Gift": { th: "ของขวัญ", en: "Gift" },
+  "อื่นๆ": { th: "อื่นๆ", en: "Other" },
+  "Other": { th: "อื่นๆ", en: "Other" },
+  "อาหาร": { th: "อาหาร", en: "Food" },
+  "Food": { th: "อาหาร", en: "Food" },
+  "เดินทาง": { th: "เดินทาง", en: "Transport" },
+  "Transport": { th: "เดินทาง", en: "Transport" },
+  "บ้าน": { th: "บ้าน", en: "Home" },
+  "Home": { th: "บ้าน", en: "Home" },
+  "สุขภาพ": { th: "สุขภาพ", en: "Health" },
+  "Health": { th: "สุขภาพ", en: "Health" },
+  "ช้อปปิ้ง": { th: "ช้อปปิ้ง", en: "Shopping" },
+  "Shopping": { th: "ช้อปปิ้ง", en: "Shopping" },
+  "บิล": { th: "บิล", en: "Bills" },
+  "Bills": { th: "บิล", en: "Bills" },
+};
+
+const UI_TEXT = {
+  th: {
+    appDescription: "xPen - ตัวช่วยบันทึกรายรับรายจ่ายส่วนตัว",
+    brandSubtitle: "ตัวช่วยจัดการเงินส่วนตัว",
+    navDashboard: "หน้าหลัก",
+    navEntry: "เพิ่มรายการ",
+    navCategories: "หมวดหมู่",
+    navPayments: "วิธีจ่าย",
+    searchPlaceholder: "ค้นหาจากโน้ต",
+    searchAria: "ค้นหารายการจากโน้ต หมวดหมู่ หรือจำนวนเงิน",
+    switchLanguage: "เปลี่ยนภาษา",
+    langButton: "EN",
+    exportJson: "ส่งออก JSON",
+    importJson: "นำเข้า JSON",
+    clearData: "ล้างข้อมูล",
+    heroEyebrow: "พื้นที่จัดเงินของ xPen",
+    heroLine: "จัดเงินให้ง่ายขึ้น",
+    heroSubtitle: "บันทึกรายรับรายจ่าย ดูภาพรวม และจัดหมวดเงินของตัวเองแบบเบา ๆ",
+    start: "เริ่มใช้งาน",
+    month: "เดือน",
+    backupSheet: "บันทึกลง Sheet",
+    restoreSheet: "โหลดจาก Sheet",
+    syncReady: "Google Sheet sync พร้อมใช้หลังตั้งค่า Vercel env",
+    previewBalanceLabel: "คงเหลือเดือนนี้",
+    previewBalanceTrend: "+12% จากเดือนก่อน",
+    previewGoal: "เป้าหมายออม",
+    previewGoalValue: "34,000 / 50,000 บาท",
+    balance: "คงเหลือ",
+    readyToStart: "พร้อมเริ่มบันทึก",
+    income: "รายรับ",
+    expense: "รายจ่าย",
+    savingRate: "อัตราออม",
+    compareIncome: "เทียบกับรายรับ",
+    itemCount: "{count} รายการ",
+    positiveMonth: "เดือนนี้ยังเป็นบวก",
+    overspentMonth: "เดือนนี้ใช้เกินรายรับ",
+    insight: "ภาพรวม",
+    monthlyTrend: "แนวโน้มเดือนนี้",
+    chartAria: "กราฟรายรับและรายจ่ายรายวัน",
+    chartFallback: "กราฟรายรับและรายจ่ายรายวันของเดือนที่เลือก",
+    chartEmpty: "ยังไม่มีข้อมูลสำหรับสร้างกราฟ",
+    categories: "หมวดหมู่",
+    categoryBreakdown: "รายจ่ายตามหมวด",
+    noExpensesThisMonth: "ยังไม่มีรายจ่ายสำหรับเดือนนี้",
+    ledger: "รายการ",
+    allTransactions: "รายการทั้งหมด",
+    all: "ทั้งหมด",
+    newRecord: "รายการใหม่",
+    amount: "จำนวนเงิน",
+    type: "ประเภท",
+    date: "วันที่",
+    category: "หมวดหมู่",
+    paymentMethod: "วิธีการจ่าย",
+    note: "โน้ต",
+    notePlaceholder: "เช่น เงินเดือน, อาหาร, เดินทาง",
+    addTransaction: "เพิ่มรายการ",
+    thisMonth: "เดือนนี้",
+    currentMonth: "เดือนปัจจุบัน",
+    entries: "รายการ",
+    saving: "ออม",
+    recent: "ล่าสุด",
+    recentTransactions: "รายการล่าสุด",
+    manageCategories: "จัดการหมวดหมู่",
+    categorySubtitle: "เพิ่ม เปลี่ยนชื่อ หรือลบหมวดหมู่ที่ยังไม่ถูกใช้งาน",
+    categoryTabsAria: "เลือกประเภทหมวดหมู่",
+    addCategory: "เพิ่มหมวดหมู่",
+    categoryName: "ชื่อหมวดหมู่",
+    categoryPlaceholder: "เช่น กาแฟ, ค่าสมาชิก, โบนัส",
+    managePayments: "จัดการวิธีการจ่าย",
+    paymentSubtitle: "เพิ่ม เปลี่ยนชื่อ หรือลบวิธีการจ่ายที่ยังไม่ถูกใช้งาน",
+    paymentMethods: "วิธีการจ่าย",
+    addPaymentMethod: "เพิ่มวิธีการจ่าย",
+    paymentName: "ชื่อวิธีการจ่าย",
+    paymentPlaceholder: "เช่น เงินสด, บัตรเครดิต, PromptPay",
+    duplicateCheck: "ตรวจรายการซ้ำ",
+    duplicateTitle: "พบข้อมูลคล้ายกัน",
+    duplicateBody: "วันที่ ยอดเงิน และวิธีชำระตรงกับรายการที่มีอยู่แล้ว ต้องการบันทึกซ้ำไหม?",
+    duplicateExisting: "มีรายการเดิมอยู่แล้ว: {name} ({type})",
+    cancel: "ยกเลิก",
+    saveDuplicate: "บันทึกซ้ำ",
+    editRecord: "แก้ไขรายการ",
+    saveChanges: "บันทึก",
+    closeDuplicate: "ปิดหน้าต่างตรวจรายการซ้ำ",
+    closeEdit: "ปิดฟอร์มแก้ไข",
+    emptyTitle: "ยังไม่มีรายการในช่วงนี้",
+    emptyBody: "เริ่มจากเพิ่มรายรับหรือรายจ่ายแรกของคุณ",
+    save: "บันทึก",
+    delete: "ลบ",
+    rename: "เปลี่ยนชื่อ {name}",
+    deletePaymentDisabled: "ลบได้เฉพาะวิธีที่ยังไม่ถูกใช้ และต้องเหลืออย่างน้อย 1 วิธี",
+    deleteCategoryDisabled: "ลบได้เฉพาะหมวดหมู่ที่ยังไม่ถูกใช้ และต้องเหลืออย่างน้อย 1 หมวด",
+    editTransaction: "แก้ไขรายการ",
+    deleteTransaction: "ลบรายการ",
+    resetConfirm: "ล้างข้อมูลทั้งหมดในเครื่องนี้?",
+    importTooLarge: "ไฟล์ใหญ่เกินไป จำกัดการนำเข้าไว้ที่ 1 MB",
+    importConfirm: "การนำเข้าจะแทนที่รายการทั้งหมดในเครื่องนี้ ต้องการดำเนินการต่อ?",
+    importInvalid: "ไฟล์นี้นำเข้าไม่ได้ กรุณาตรวจสอบว่าเป็น JSON ของ xPen",
+    backupAutoProgress: "กำลัง sync รายการล่าสุดลง Google Sheet...",
+    backupProgress: "กำลังบันทึกลง Google Sheet...",
+    backupAutoDone: "sync ลง Sheet แล้ว: {count} รายการ",
+    backupDone: "บันทึกลง Sheet แล้ว: {count} รายการ",
+    backupFailed: "ยัง sync ไม่ได้ ตรวจ Vercel env และ Apps Script Web App URL",
+    restoreProgress: "กำลังโหลดจาก Google Sheet...",
+    restoreConfirm: "ข้อมูลจาก Google Sheet จะแทนที่รายการทั้งหมดในเครื่องนี้ ต้องการดำเนินการต่อ?",
+    restoreDone: "โหลดจาก Sheet แล้ว: {count} รายการ",
+    restoreCanceled: "ยกเลิกการโหลดจาก Sheet",
+    restoreFailed: "ยังโหลดไม่ได้ ตรวจ Vercel env และ Apps Script Web App URL",
+    storageTransactionsFailed: "บันทึกข้อมูลไม่ได้ พื้นที่จัดเก็บของ browser อาจเต็ม",
+    storagePaymentsFailed: "บันทึกวิธีการจ่ายไม่ได้ พื้นที่จัดเก็บของ browser อาจเต็ม",
+    storageCategoriesFailed: "บันทึกหมวดหมู่ไม่ได้ พื้นที่จัดเก็บของ browser อาจเต็ม",
+    viewOpened: "เปิดหน้า {view}",
+    viewDashboard: "หน้าหลัก",
+    viewEntry: "เพิ่มรายการ",
+    viewCategories: "หมวดหมู่",
+    viewPayments: "วิธีจ่าย",
+    chartSummaryWithExpense:
+      "เดือน {month} มีรายรับรวม {income} รายจ่ายรวม {expense} และรายจ่ายสูงสุดวันที่ {day}",
+    chartSummaryNoExpense: "เดือน {month} มีรายรับรวม {income} และยังไม่มีรายจ่าย",
+  },
+  en: {
+    appDescription: "xPen - personal income and expense tracker",
+    brandSubtitle: "Personal money tracker",
+    navDashboard: "Dashboard",
+    navEntry: "Add entry",
+    navCategories: "Categories",
+    navPayments: "Payments",
+    searchPlaceholder: "Search by note",
+    searchAria: "Search transactions by note, category, or amount",
+    switchLanguage: "Switch language",
+    langButton: "TH",
+    exportJson: "Export JSON",
+    importJson: "Import JSON",
+    clearData: "Clear data",
+    heroEyebrow: "xPen money space",
+    heroLine: "Make money tracking easier",
+    heroSubtitle: "Record income and expenses, scan the big picture, and organize your money simply.",
+    start: "Start",
+    month: "Month",
+    backupSheet: "Save to Sheet",
+    restoreSheet: "Load from Sheet",
+    syncReady: "Google Sheet sync is ready after Vercel env setup",
+    previewBalanceLabel: "This month balance",
+    previewBalanceTrend: "+12% from last month",
+    previewGoal: "Saving goal",
+    previewGoalValue: "34,000 / 50,000 THB",
+    balance: "Balance",
+    readyToStart: "Ready to start",
+    income: "Income",
+    expense: "Expense",
+    savingRate: "Saving rate",
+    compareIncome: "Compared with income",
+    itemCount: "{count} records",
+    positiveMonth: "This month is still positive",
+    overspentMonth: "Spending is above income",
+    insight: "Insight",
+    monthlyTrend: "This month trend",
+    chartAria: "Daily income and expense chart",
+    chartFallback: "Daily income and expense chart for the selected month",
+    chartEmpty: "No data to draw a chart yet",
+    categories: "Categories",
+    categoryBreakdown: "Expense by category",
+    noExpensesThisMonth: "No expenses this month",
+    ledger: "Ledger",
+    allTransactions: "All transactions",
+    all: "All",
+    newRecord: "New record",
+    amount: "Amount",
+    type: "Type",
+    date: "Date",
+    category: "Category",
+    paymentMethod: "Payment method",
+    note: "Note",
+    notePlaceholder: "For example salary, food, transport",
+    addTransaction: "Add entry",
+    thisMonth: "This month",
+    currentMonth: "Current month",
+    entries: "Records",
+    saving: "Saving",
+    recent: "Recent",
+    recentTransactions: "Recent transactions",
+    manageCategories: "Manage categories",
+    categorySubtitle: "Add, rename, or delete unused categories",
+    categoryTabsAria: "Choose category type",
+    addCategory: "Add category",
+    categoryName: "Category name",
+    categoryPlaceholder: "For example coffee, subscription, bonus",
+    managePayments: "Manage payments",
+    paymentSubtitle: "Add, rename, or delete unused payment methods",
+    paymentMethods: "Payment methods",
+    addPaymentMethod: "Add payment method",
+    paymentName: "Payment method name",
+    paymentPlaceholder: "For example cash, credit card, PromptPay",
+    duplicateCheck: "Duplicate check",
+    duplicateTitle: "Similar record found",
+    duplicateBody: "The date, amount, and payment method match an existing record. Save it anyway?",
+    duplicateExisting: "Existing record: {name} ({type})",
+    cancel: "Cancel",
+    saveDuplicate: "Save duplicate",
+    editRecord: "Edit record",
+    saveChanges: "Save changes",
+    closeDuplicate: "Close duplicate confirmation",
+    closeEdit: "Close edit form",
+    emptyTitle: "No records in this period",
+    emptyBody: "Start by adding your first income or expense",
+    save: "Save",
+    delete: "Delete",
+    rename: "Rename {name}",
+    deletePaymentDisabled: "Only unused methods can be deleted, and at least one method must remain",
+    deleteCategoryDisabled: "Only unused categories can be deleted, and at least one category must remain",
+    editTransaction: "Edit transaction",
+    deleteTransaction: "Delete transaction",
+    resetConfirm: "Clear all data on this device?",
+    importTooLarge: "File is too large. Import is limited to 1 MB",
+    importConfirm: "Importing will replace all records on this device. Continue?",
+    importInvalid: "This file cannot be imported. Please check that it is an xPen JSON file",
+    backupAutoProgress: "Syncing latest records to Google Sheet...",
+    backupProgress: "Saving to Google Sheet...",
+    backupAutoDone: "Synced to Sheet: {count} records",
+    backupDone: "Saved to Sheet: {count} records",
+    backupFailed: "Cannot sync yet. Check Vercel env and Apps Script Web App URL",
+    restoreProgress: "Loading from Google Sheet...",
+    restoreConfirm: "Google Sheet data will replace all records on this device. Continue?",
+    restoreDone: "Loaded from Sheet: {count} records",
+    restoreCanceled: "Sheet load canceled",
+    restoreFailed: "Cannot load yet. Check Vercel env and Apps Script Web App URL",
+    storageTransactionsFailed: "Could not save records. Browser storage may be full",
+    storagePaymentsFailed: "Could not save payment methods. Browser storage may be full",
+    storageCategoriesFailed: "Could not save categories. Browser storage may be full",
+    viewOpened: "{view} view opened",
+    viewDashboard: "Dashboard",
+    viewEntry: "Add entry",
+    viewCategories: "Categories",
+    viewPayments: "Payment methods",
+    chartSummaryWithExpense:
+      "{month} has total income {income}, total expenses {expense}, and the highest expense on day {day}",
+    chartSummaryNoExpense: "{month} has total income {income} and no expenses yet",
+  },
+};
+
 const initialPaymentMethods = loadPaymentMethods();
 const initialCategories = loadCategories();
 
 const state = {
+  lang: loadLanguage(),
   categories: initialCategories,
   paymentMethods: initialPaymentMethods,
   transactions: loadTransactions(initialPaymentMethods, initialCategories),
@@ -63,6 +336,7 @@ const els = {
   chart: document.querySelector("#monthChart"),
   exportJsonButton: document.querySelector("#exportJsonButton"),
   exportCsvButton: document.querySelector("#exportCsvButton"),
+  langToggleButton: document.querySelector("#langToggleButton"),
   sheetsBackupButton: document.querySelector("#sheetsBackupButton"),
   sheetsRestoreButton: document.querySelector("#sheetsRestoreButton"),
   sheetsSyncStatus: document.querySelector("#sheetsSyncStatus"),
@@ -105,19 +379,6 @@ const els = {
   confirmDuplicateButton: document.querySelector("#confirmDuplicateTransactionButton"),
 };
 
-const money = new Intl.NumberFormat("th-TH", {
-  style: "currency",
-  currency: CURRENCY,
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-});
-
-const compactMoney = new Intl.NumberFormat("th-TH", {
-  notation: "compact",
-  compactDisplay: "short",
-  maximumFractionDigits: 1,
-});
-
 const sheetSyncQueue = {
   inFlight: false,
   pending: false,
@@ -129,6 +390,7 @@ function init() {
   els.date.value = toDateInputValue(new Date());
   state.filters.month = normalizeMonthKey(state.filters.month);
   els.monthFilter.value = state.filters.month;
+  applyLanguage();
   syncCategoryOptions(getSelectedType());
   syncPaymentMethodOptions();
   bindEvents();
@@ -180,6 +442,7 @@ function bindEvents() {
 
   els.exportJsonButton.addEventListener("click", exportJson);
   els.exportCsvButton.addEventListener("click", exportCsv);
+  els.langToggleButton.addEventListener("click", toggleLanguage);
   els.sheetsBackupButton.addEventListener("click", backupToSheets);
   els.sheetsRestoreButton.addEventListener("click", restoreFromSheets);
   els.importButton.addEventListener("click", () => els.importFile.click());
@@ -219,6 +482,222 @@ function bindEvents() {
       closeEditTransactionModal();
     }
   });
+}
+
+function t(key, values = {}) {
+  const template = UI_TEXT[state.lang]?.[key] || UI_TEXT.en[key] || key;
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+    template,
+  );
+}
+
+function setText(selector, key) {
+  const element = document.querySelector(selector);
+  if (element) element.textContent = t(key);
+}
+
+function setAttribute(selector, name, key) {
+  const element = document.querySelector(selector);
+  if (element) element.setAttribute(name, t(key));
+}
+
+function setButtonText(selector, key) {
+  const button = document.querySelector(selector);
+  if (!button) return;
+
+  const icon = button.querySelector("svg");
+  button.replaceChildren();
+  if (icon) button.append(icon);
+  button.append(document.createTextNode(t(key)));
+}
+
+function applyLanguage() {
+  document.documentElement.lang = state.lang;
+  document.title = "xPen | Expenses";
+  setAttribute('meta[name="description"]', "content", "appDescription");
+
+  setText(".brand small", "brandSubtitle");
+  setText('[data-view="dashboard"]', "navDashboard");
+  setText('[data-view="entry"]', "navEntry");
+  setText('[data-view="categories"]', "navCategories");
+  setText('[data-view="payments"]', "navPayments");
+
+  els.searchInput.placeholder = t("searchPlaceholder");
+  els.searchInput.setAttribute("aria-label", t("searchAria"));
+  setIconButtonLabel(els.exportJsonButton, "exportJson");
+  setIconButtonLabel(els.importButton, "importJson");
+  setIconButtonLabel(els.resetButton, "clearData");
+  setIconButtonLabel(els.langToggleButton, "switchLanguage");
+  setLanguageButtonText();
+
+  setText(".hero-copy .eyebrow", "heroEyebrow");
+  setText(".hero-line", "heroLine");
+  setText(".hero-subtitle", "heroSubtitle");
+  setButtonText("#heroStartButton", "start");
+  setText(".month-picker label", "month");
+  setButtonText("#sheetsBackupButton", "backupSheet");
+  setButtonText("#sheetsRestoreButton", "restoreSheet");
+  setText(".sync-status", "syncReady");
+  setText(".xpen-preview-balance small", "previewBalanceLabel");
+  setText(".xpen-preview-balance span", "previewBalanceTrend");
+  setText(".xpen-preview-saving strong", "previewGoal");
+  setText(".xpen-preview-saving small", "previewGoalValue");
+
+  setText(".metric.balance span", "balance");
+  setText(".metric.income span", "income");
+  setText(".metric.expense span", "expense");
+  setText(".metric.rate span", "savingRate");
+  setText("#savingRateHint", "compareIncome");
+
+  setText(".chart-panel .eyebrow", "insight");
+  setText(".chart-panel h2", "monthlyTrend");
+  els.chart.setAttribute("aria-label", t("chartAria"));
+  setText("#chartSummary", "chartEmpty");
+  setText(".category-panel .eyebrow", "categories");
+  setText(".category-panel h2", "categoryBreakdown");
+  setText(".transactions-panel .eyebrow", "ledger");
+  setText(".transactions-panel h2", "allTransactions");
+  setTypeFilterLabels();
+
+  setText(".entry-panel .eyebrow", "newRecord");
+  setText(".entry-panel h1", "addTransaction");
+  setText("#transactionForm .segmented-control legend", "type");
+  setEntryFormLabels("#transactionForm", "");
+  setButtonText("#transactionForm .primary-button", "addTransaction");
+  setText(".mini-summary .eyebrow", "thisMonth");
+  setText(".mini-stats div:first-child small", "entries");
+  setText(".mini-stats div:last-child small", "saving");
+  setText(".recent-panel .eyebrow", "recent");
+  setText(".recent-panel h2", "recentTransactions");
+
+  setText(".categories-panel .eyebrow", "categories");
+  setText(".categories-panel h1", "manageCategories");
+  setText(".categories-panel .section-subtitle", "categorySubtitle");
+  document.querySelector(".category-tabs")?.setAttribute("aria-label", t("categoryTabsAria"));
+  setText("#expenseCategoryTab", "expense");
+  setText("#incomeCategoryTab", "income");
+  setText("#expenseCategoryPanel .sr-only", "expense");
+  setText("#incomeCategoryPanel .sr-only", "income");
+  setText(".category-form-panel .eyebrow", "newRecord");
+  setText(".category-form-panel h2", "addCategory");
+  setText('#categoryForm label:nth-of-type(1) span', "type");
+  setText('#categoryForm label:nth-of-type(2) span', "categoryName");
+  els.categoryNameInput.placeholder = t("categoryPlaceholder");
+  setButtonText("#categoryForm .primary-button", "addCategory");
+  setTypeSelectLabels(els.categoryTypeInput);
+
+  setText(".methods-panel .eyebrow", "paymentMethods");
+  setText(".methods-panel h1", "managePayments");
+  setText(".methods-panel .section-subtitle", "paymentSubtitle");
+  setText(".method-form-panel .eyebrow", "newRecord");
+  setText(".method-form-panel h2", "addPaymentMethod");
+  setText("#paymentMethodForm .field span", "paymentName");
+  els.paymentMethodNameInput.placeholder = t("paymentPlaceholder");
+  setButtonText("#paymentMethodForm .primary-button", "addPaymentMethod");
+
+  setText("#duplicateTransactionModal .eyebrow", "duplicateCheck");
+  setText("#duplicateTransactionTitle", "duplicateTitle");
+  setText(".duplicate-check p", "duplicateBody");
+  setButtonText("#cancelDuplicateTransactionButton", "cancel");
+  setButtonText("#confirmDuplicateTransactionButton", "saveDuplicate");
+  setAttribute("#closeDuplicateTransactionButton", "aria-label", "closeDuplicate");
+
+  setText("#transactionEditModal .eyebrow", "editRecord");
+  setText("#editTransactionTitle", "editRecord");
+  setEntryFormLabels("#editTransactionForm", "edit");
+  setButtonText("#cancelEditTransactionButton", "cancel");
+  setButtonText("#editTransactionForm .primary-button", "saveChanges");
+  setAttribute("#closeEditTransactionButton", "aria-label", "closeEdit");
+
+  setText("#emptyStateTemplate strong", "emptyTitle");
+  setText("#emptyStateTemplate span", "emptyBody");
+}
+
+function setIconButtonLabel(button, key) {
+  if (!button) return;
+  button.setAttribute("aria-label", t(key));
+  const tooltip = button.querySelector(".tooltip");
+  if (tooltip) tooltip.textContent = t(key);
+}
+
+function setLanguageButtonText() {
+  const tooltip = els.langToggleButton.querySelector(".tooltip");
+  els.langToggleButton.replaceChildren(document.createTextNode(t("langButton")));
+  if (tooltip) els.langToggleButton.append(tooltip);
+}
+
+function setEntryFormLabels(formSelector, prefix) {
+  const form = document.querySelector(formSelector);
+  if (!form) return;
+  const labels = Array.from(form.querySelectorAll(".field > span"));
+  const keys = ["amount", "date", "category", "paymentMethod", "note"];
+  labels.forEach((label, index) => {
+    if (keys[index]) label.textContent = t(keys[index]);
+  });
+  const legend = form.querySelector(".segmented-control legend");
+  if (legend) legend.textContent = t("type");
+  const typeLabels = form.querySelectorAll(".segmented-control span");
+  if (typeLabels[0]) typeLabels[0].textContent = t("income");
+  if (typeLabels[1]) typeLabels[1].textContent = t("expense");
+  const noteInput = form.querySelector(prefix ? "#editNoteInput" : "#noteInput");
+  if (noteInput) noteInput.placeholder = t("notePlaceholder");
+}
+
+function setTypeFilterLabels() {
+  setOptionText(els.typeFilter, "all", "all");
+  setOptionText(els.typeFilter, "income", "income");
+  setOptionText(els.typeFilter, "expense", "expense");
+}
+
+function setTypeSelectLabels(select) {
+  setOptionText(select, "expense", "expense");
+  setOptionText(select, "income", "income");
+}
+
+function setOptionText(select, value, key) {
+  const option = Array.from(select.options).find((item) => item.value === value);
+  if (option) option.textContent = t(key);
+}
+
+function toggleLanguage() {
+  state.lang = state.lang === "th" ? "en" : "th";
+  persistLanguage();
+  applyLanguage();
+  syncCategoryOptions(getSelectedType());
+  syncEditCategoryOptions(getSelectedEditType());
+  syncPaymentMethodOptions();
+  syncEditPaymentMethodOptions();
+  render();
+}
+
+function displayBuiltInLabel(label) {
+  return BUILT_IN_LABELS[label]?.[state.lang] || label;
+}
+
+function displayCategoryName(category) {
+  return displayBuiltInLabel(category);
+}
+
+function displayPaymentMethodName(name) {
+  return displayBuiltInLabel(name);
+}
+
+function formatMoney(value) {
+  return new Intl.NumberFormat(state.lang === "th" ? "th-TH" : "en-US", {
+    style: "currency",
+    currency: CURRENCY,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatCompactMoney(value) {
+  return new Intl.NumberFormat(state.lang === "th" ? "th-TH" : "en-US", {
+    notation: "compact",
+    compactDisplay: "short",
+    maximumFractionDigits: 1,
+  }).format(value);
 }
 
 function handleSubmit(event) {
@@ -284,12 +763,13 @@ function findDuplicateTransaction(transaction) {
 
 function openDuplicateTransactionModal(transaction, duplicate) {
   state.pendingDuplicateTransaction = transaction;
-  els.duplicateSummary.textContent = `${formatDate(transaction.date)} · ${money.format(
+  els.duplicateSummary.textContent = `${formatDate(transaction.date)} · ${formatMoney(
     transaction.amount,
   )} · ${getPaymentMethodName(transaction.paymentMethodId)}`;
-  els.duplicateDetail.textContent = `มีรายการเดิมอยู่แล้ว: ${
-    duplicate.note || duplicate.category
-  } (${duplicate.type === "income" ? "รายรับ" : "รายจ่าย"})`;
+  els.duplicateDetail.textContent = t("duplicateExisting", {
+    name: duplicate.note || displayCategoryName(duplicate.category),
+    type: t(duplicate.type),
+  });
   els.duplicateModal.hidden = false;
   document.body.style.overflow = "hidden";
   window.requestAnimationFrame(() => els.confirmDuplicateButton.focus());
@@ -324,7 +804,7 @@ function syncCategoryOptions(type) {
   state.categories[type].forEach((category) => {
     const option = document.createElement("option");
     option.value = category;
-    option.textContent = category;
+    option.textContent = displayCategoryName(category);
     els.category.append(option);
   });
 }
@@ -339,7 +819,7 @@ function syncEditCategoryOptions(type, selectedCategory = els.editCategory.value
   categories.forEach((category) => {
     const option = document.createElement("option");
     option.value = category;
-    option.textContent = category;
+    option.textContent = displayCategoryName(category);
     option.selected = category === nextSelected;
     els.editCategory.append(option);
   });
@@ -355,7 +835,7 @@ function syncPaymentMethodOptions(selectedId = els.paymentMethod.value) {
   state.paymentMethods.forEach((method) => {
     const option = document.createElement("option");
     option.value = method.id;
-    option.textContent = method.name;
+    option.textContent = displayPaymentMethodName(method.name);
     option.selected = method.id === nextSelectedId;
     els.paymentMethod.append(option);
   });
@@ -371,7 +851,7 @@ function syncEditPaymentMethodOptions(selectedId = els.editPaymentMethod.value) 
   state.paymentMethods.forEach((method) => {
     const option = document.createElement("option");
     option.value = method.id;
-    option.textContent = method.name;
+    option.textContent = displayPaymentMethodName(method.name);
     option.selected = method.id === nextSelectedId;
     els.editPaymentMethod.append(option);
   });
@@ -399,13 +879,13 @@ function renderSummary() {
   const incomeCount = monthly.filter((item) => item.type === "income").length;
   const expenseCount = monthly.filter((item) => item.type === "expense").length;
 
-  els.balanceValue.textContent = money.format(balance);
+  els.balanceValue.textContent = formatMoney(balance);
   els.balanceHint.textContent =
-    balance >= 0 ? "เดือนนี้ยังเป็นบวก" : "เดือนนี้ใช้เกินรายรับ";
-  els.incomeValue.textContent = money.format(income);
-  els.incomeCount.textContent = `${incomeCount} รายการ`;
-  els.expenseValue.textContent = money.format(expense);
-  els.expenseCount.textContent = `${expenseCount} รายการ`;
+    balance >= 0 ? t("positiveMonth") : t("overspentMonth");
+  els.incomeValue.textContent = formatMoney(income);
+  els.incomeCount.textContent = t("itemCount", { count: incomeCount });
+  els.expenseValue.textContent = formatMoney(expense);
+  els.expenseCount.textContent = t("itemCount", { count: expenseCount });
   els.savingRateValue.textContent = `${savingRate}%`;
 }
 
@@ -486,7 +966,7 @@ function drawGrid(ctx, width, height, pad, maxValue) {
     ctx.moveTo(pad.left, y);
     ctx.lineTo(width - pad.right, y);
     ctx.stroke();
-    ctx.fillText(compactMoney.format(value), pad.left - 8, y);
+    ctx.fillText(formatCompactMoney(value), pad.left - 8, y);
   }
 
   ctx.restore();
@@ -537,7 +1017,7 @@ function renderBreakdown() {
   if (sorted.length === 0) {
     const empty = document.createElement("p");
     empty.className = "empty-line";
-    empty.textContent = "ยังไม่มีรายจ่ายสำหรับเดือนนี้";
+    empty.textContent = t("noExpensesThisMonth");
     els.categoryBreakdown.append(empty);
     return;
   }
@@ -550,9 +1030,9 @@ function renderBreakdown() {
     headline.className = "category-topline";
 
     const name = document.createElement("span");
-    name.textContent = category;
+    name.textContent = displayCategoryName(category);
     const amount = document.createElement("small");
-    amount.textContent = money.format(total);
+    amount.textContent = formatMoney(total);
 
     const track = document.createElement("div");
     track.className = "bar-track";
@@ -588,7 +1068,7 @@ function renderEntrySummary() {
   const balance = income - expense;
   const savingRate = income > 0 ? Math.round((balance / income) * 100) : 0;
 
-  els.entryBalanceValue.textContent = money.format(balance);
+  els.entryBalanceValue.textContent = formatMoney(balance);
   els.entryMonthValue.textContent = formatMonth(getCurrentMonthKey());
   els.entryTotalValue.textContent = String(monthly.length);
   els.entrySavingValue.textContent = `${savingRate}%`;
@@ -618,13 +1098,13 @@ function renderPaymentMethods() {
 
     const input = document.createElement("input");
     input.className = "method-name-input";
-    input.value = method.name;
+    input.value = displayPaymentMethodName(method.name);
     input.maxLength = 40;
-    input.setAttribute("aria-label", `Rename ${method.name}`);
+    input.setAttribute("aria-label", t("rename", { name: displayPaymentMethodName(method.name) }));
 
     const usage = document.createElement("span");
     usage.className = "method-usage";
-    usage.textContent = `${usageCount} รายการ`;
+    usage.textContent = t("itemCount", { count: usageCount });
 
     const actions = document.createElement("div");
     actions.className = "method-actions";
@@ -632,16 +1112,16 @@ function renderPaymentMethods() {
     const save = document.createElement("button");
     save.className = "text-button";
     save.type = "button";
-    save.textContent = "Save";
+    save.textContent = t("save");
     save.addEventListener("click", () => renamePaymentMethod(method.id, input.value));
 
     const remove = document.createElement("button");
     remove.className = "text-button danger";
     remove.type = "button";
-    remove.textContent = "Delete";
+    remove.textContent = t("delete");
     remove.disabled = usageCount > 0 || state.paymentMethods.length === 1;
     remove.title = remove.disabled
-      ? "ลบได้เฉพาะวิธีที่ยังไม่ถูกใช้ และต้องเหลืออย่างน้อย 1 วิธี"
+      ? t("deletePaymentDisabled")
       : "";
     remove.addEventListener("click", () => removePaymentMethod(method.id));
 
@@ -667,13 +1147,13 @@ function renderCategoryList(type, target) {
 
     const input = document.createElement("input");
     input.className = "method-name-input";
-    input.value = category;
+    input.value = displayCategoryName(category);
     input.maxLength = 40;
-    input.setAttribute("aria-label", `Rename ${category}`);
+    input.setAttribute("aria-label", t("rename", { name: displayCategoryName(category) }));
 
     const usage = document.createElement("span");
     usage.className = "method-usage";
-    usage.textContent = `${usageCount} รายการ`;
+    usage.textContent = t("itemCount", { count: usageCount });
 
     const actions = document.createElement("div");
     actions.className = "method-actions";
@@ -681,16 +1161,16 @@ function renderCategoryList(type, target) {
     const save = document.createElement("button");
     save.className = "text-button";
     save.type = "button";
-    save.textContent = "Save";
+    save.textContent = t("save");
     save.addEventListener("click", () => renameCategory(type, category, input.value));
 
     const remove = document.createElement("button");
     remove.className = "text-button danger";
     remove.type = "button";
-    remove.textContent = "Delete";
+    remove.textContent = t("delete");
     remove.disabled = usageCount > 0 || state.categories[type].length === 1;
     remove.title = remove.disabled
-      ? "ลบได้เฉพาะหมวดหมู่ที่ยังไม่ถูกใช้ และต้องเหลืออย่างน้อย 1 หมวด"
+      ? t("deleteCategoryDisabled")
       : "";
     remove.addEventListener("click", () => removeCategory(type, category));
 
@@ -853,12 +1333,12 @@ function createTransactionRow(item, options = {}) {
   const main = document.createElement("div");
   main.className = "transaction-main";
   const title = document.createElement("strong");
-  title.textContent = item.note || item.category;
+  title.textContent = item.note || displayCategoryName(item.category);
 
   const meta = document.createElement("span");
   meta.className = "transaction-meta-line";
   const metaText = document.createElement("span");
-  metaText.textContent = `${formatDate(item.date)} · ${item.category}`;
+  metaText.textContent = `${formatDate(item.date)} · ${displayCategoryName(item.category)}`;
   const method = document.createElement("span");
   method.className = "payment-chip";
   method.textContent = getPaymentMethodName(item.paymentMethodId);
@@ -867,7 +1347,7 @@ function createTransactionRow(item, options = {}) {
 
   const amount = document.createElement("div");
   amount.className = `transaction-amount ${item.type}`;
-  amount.textContent = `${item.type === "income" ? "+" : "-"}${money.format(
+  amount.textContent = `${item.type === "income" ? "+" : "-"}${formatMoney(
     item.amount,
   )}`;
 
@@ -880,7 +1360,7 @@ function createTransactionRow(item, options = {}) {
     const editButton = document.createElement("button");
     editButton.className = "row-action edit";
     editButton.type = "button";
-    editButton.setAttribute("aria-label", "Edit transaction");
+    editButton.setAttribute("aria-label", t("editTransaction"));
     editButton.dataset.id = item.id;
     editButton.innerHTML =
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
@@ -889,7 +1369,7 @@ function createTransactionRow(item, options = {}) {
     const deleteButton = document.createElement("button");
     deleteButton.className = "row-action delete";
     deleteButton.type = "button";
-    deleteButton.setAttribute("aria-label", "Delete transaction");
+    deleteButton.setAttribute("aria-label", t("deleteTransaction"));
     deleteButton.dataset.id = item.id;
     deleteButton.innerHTML =
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6m4-6v6"></path><path d="M6 7l1 13h10l1-13"></path><path d="M9 7V4h6v3"></path></svg>';
@@ -994,7 +1474,7 @@ function setActiveView(viewName, updateHash = true, moveFocus = true) {
     window.requestAnimationFrame(renderChart);
   }
 
-  els.viewAnnouncer.textContent = `${getViewLabel(nextView)} view opened`;
+  els.viewAnnouncer.textContent = t("viewOpened", { view: getViewLabel(nextView) });
 
   if (moveFocus && activePanel) {
     window.requestAnimationFrame(() => activePanel.focus({ preventScroll: true }));
@@ -1022,7 +1502,7 @@ function getFilteredTransactions() {
   return getMonthTransactions().filter((item) => {
     const matchesType =
       state.filters.type === "all" || item.type === state.filters.type;
-    const haystack = `${item.category} ${item.note} ${item.amount} ${getPaymentMethodName(
+    const haystack = `${item.category} ${displayCategoryName(item.category)} ${item.note} ${item.amount} ${getPaymentMethodName(
       item.paymentMethodId,
     )}`.toLowerCase();
     const matchesSearch =
@@ -1046,7 +1526,7 @@ function removeTransaction(id) {
 }
 
 function resetData() {
-  const confirmed = window.confirm("ล้างข้อมูลทั้งหมดในเครื่องนี้?");
+  const confirmed = window.confirm(t("resetConfirm"));
   if (!confirmed) return;
 
   state.transactions = [];
@@ -1090,7 +1570,7 @@ function importJson(event) {
   if (!file) return;
 
   if (file.size > MAX_IMPORT_BYTES) {
-    window.alert("ไฟล์ใหญ่เกินไป จำกัดการนำเข้าไว้ที่ 1 MB");
+    window.alert(t("importTooLarge"));
     els.importFile.value = "";
     return;
   }
@@ -1100,11 +1580,10 @@ function importJson(event) {
     try {
       const payload = JSON.parse(String(reader.result));
       applyImportedPayload(payload, {
-        confirmMessage:
-          "การนำเข้าจะแทนที่รายการทั้งหมดในเครื่องนี้ ต้องการดำเนินการต่อ?",
+        confirmMessage: t("importConfirm"),
       });
     } catch (error) {
-      window.alert("ไฟล์นี้นำเข้าไม่ได้ กรุณาตรวจสอบว่าเป็น JSON ของ xPen");
+      window.alert(t("importInvalid"));
     } finally {
       els.importFile.value = "";
     }
@@ -1118,8 +1597,8 @@ async function backupToSheets(options = {}) {
 
   setSheetsSyncStatus(
     isAutomatic
-      ? "กำลัง sync รายการล่าสุดลง Google Sheet..."
-      : "กำลังบันทึกลง Google Sheet...",
+      ? t("backupAutoProgress")
+      : t("backupProgress"),
   );
 
   if (manageButtons) {
@@ -1143,13 +1622,11 @@ async function backupToSheets(options = {}) {
 
     setSheetsSyncStatus(
       isAutomatic
-        ? `sync ลง Sheet แล้ว: ${state.transactions.length} รายการ`
-        : `บันทึกลง Sheet แล้ว: ${state.transactions.length} รายการ`,
+        ? t("backupAutoDone", { count: state.transactions.length })
+        : t("backupDone", { count: state.transactions.length }),
     );
   } catch (error) {
-    setSheetsSyncStatus(
-      "ยัง sync ไม่ได้ ตรวจ Vercel env และ Apps Script Web App URL",
-    );
+    setSheetsSyncStatus(t("backupFailed"));
   } finally {
     if (manageButtons) {
       setSheetsButtonsDisabled(false);
@@ -1181,7 +1658,7 @@ async function flushSheetsBackupQueue() {
 }
 
 async function restoreFromSheets() {
-  setSheetsSyncStatus("กำลังโหลดจาก Google Sheet...");
+  setSheetsSyncStatus(t("restoreProgress"));
   setSheetsButtonsDisabled(true);
 
   try {
@@ -1193,19 +1670,16 @@ async function restoreFromSheets() {
     }
 
     const applied = applyImportedPayload(result.payload, {
-      confirmMessage:
-        "ข้อมูลจาก Google Sheet จะแทนที่รายการทั้งหมดในเครื่องนี้ ต้องการดำเนินการต่อ?",
+      confirmMessage: t("restoreConfirm"),
     });
 
     setSheetsSyncStatus(
       applied
-        ? `โหลดจาก Sheet แล้ว: ${state.transactions.length} รายการ`
-        : "ยกเลิกการโหลดจาก Sheet",
+        ? t("restoreDone", { count: state.transactions.length })
+        : t("restoreCanceled"),
     );
   } catch (error) {
-    setSheetsSyncStatus(
-      "ยังโหลดไม่ได้ ตรวจ Vercel env และ Apps Script Web App URL",
-    );
+    setSheetsSyncStatus(t("restoreFailed"));
   } finally {
     setSheetsButtonsDisabled(false);
   }
@@ -1372,11 +1846,28 @@ function loadCategories() {
   }
 }
 
+function loadLanguage() {
+  try {
+    const saved = localStorage.getItem(LANGUAGE_KEY);
+    return LANGUAGES.includes(saved) ? saved : "th";
+  } catch {
+    return "th";
+  }
+}
+
+function persistLanguage() {
+  try {
+    localStorage.setItem(LANGUAGE_KEY, state.lang);
+  } catch {
+    // Language choice is nice to keep, but the UI can still work without it.
+  }
+}
+
 function persistTransactions() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.transactions));
   } catch {
-    window.alert("บันทึกข้อมูลไม่ได้ พื้นที่จัดเก็บของ browser อาจเต็ม");
+    window.alert(t("storageTransactionsFailed"));
   }
 }
 
@@ -1384,7 +1875,7 @@ function persistPaymentMethods() {
   try {
     localStorage.setItem(PAYMENT_METHODS_KEY, JSON.stringify(state.paymentMethods));
   } catch {
-    window.alert("บันทึกวิธีการจ่ายไม่ได้ พื้นที่จัดเก็บของ browser อาจเต็ม");
+    window.alert(t("storagePaymentsFailed"));
   }
 }
 
@@ -1392,7 +1883,7 @@ function persistCategories() {
   try {
     localStorage.setItem(CATEGORIES_KEY, JSON.stringify(state.categories));
   } catch {
-    window.alert("บันทึกหมวดหมู่ไม่ได้ พื้นที่จัดเก็บของ browser อาจเต็ม");
+    window.alert(t("storageCategoriesFailed"));
   }
 }
 
@@ -1489,7 +1980,7 @@ function formatDate(dateValue) {
     return dateValue;
   }
 
-  return new Intl.DateTimeFormat("th-TH", {
+  return new Intl.DateTimeFormat(state.lang === "th" ? "th-TH" : "en-US", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -1498,7 +1989,7 @@ function formatDate(dateValue) {
 
 function formatMonth(monthKey) {
   const [year, month] = normalizeMonthKey(monthKey).split("-").map(Number);
-  return new Intl.DateTimeFormat("th-TH", {
+  return new Intl.DateTimeFormat(state.lang === "th" ? "th-TH" : "en-US", {
     month: "long",
     year: "numeric",
   }).format(new Date(year, month - 1, 1));
@@ -1512,12 +2003,16 @@ function renderChartSummary(incomeByDay, expenseByDay) {
 
   els.chartSummary.textContent =
     peakExpense > 0
-      ? `เดือน ${formatMonth(state.filters.month)} มีรายรับรวม ${money.format(
-          income,
-        )} รายจ่ายรวม ${money.format(expense)} และรายจ่ายสูงสุดวันที่ ${peakDay}`
-      : `เดือน ${formatMonth(state.filters.month)} มีรายรับรวม ${money.format(
-          income,
-        )} และยังไม่มีรายจ่าย`;
+      ? t("chartSummaryWithExpense", {
+          month: formatMonth(state.filters.month),
+          income: formatMoney(income),
+          expense: formatMoney(expense),
+          day: peakDay,
+        })
+      : t("chartSummaryNoExpense", {
+          month: formatMonth(state.filters.month),
+          income: formatMoney(income),
+        });
 }
 
 function ensureUniqueTransactionIds(transactions) {
@@ -1643,11 +2138,11 @@ function isDuplicatePaymentMethodName(name, currentId = "") {
 }
 
 function getPaymentMethodName(id) {
-  return (
+  const name =
     state.paymentMethods.find((method) => method.id === id)?.name ||
     state.paymentMethods[0]?.name ||
-    DEFAULT_PAYMENT_METHODS[0].name
-  );
+    DEFAULT_PAYMENT_METHODS[0].name;
+  return displayPaymentMethodName(name);
 }
 
 function getFallbackPaymentMethodId(methods = null) {
@@ -1661,11 +2156,11 @@ function countTransactionsByPaymentMethod(id) {
 
 function getViewLabel(view) {
   return {
-    dashboard: "Dashboard",
-    entry: "Add entry",
-    categories: "Categories",
-    payments: "Payment methods",
-  }[view] || "Dashboard";
+    dashboard: t("viewDashboard"),
+    entry: t("viewEntry"),
+    categories: t("viewCategories"),
+    payments: t("viewPayments"),
+  }[view] || t("viewDashboard");
 }
 
 function isValidMonthKey(monthKey) {
