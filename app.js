@@ -397,6 +397,17 @@ function init() {
   setCategoryTab(state.activeCategoryType);
   setActiveView(getInitialView(), false, false);
   render();
+  restoreFromSheetsWhenEmpty();
+}
+
+function restoreFromSheetsWhenEmpty() {
+  if (state.transactions.length > 0) return;
+
+  window.setTimeout(() => {
+    if (state.transactions.length === 0) {
+      void restoreFromSheets();
+    }
+  }, 250);
 }
 
 function bindEvents() {
