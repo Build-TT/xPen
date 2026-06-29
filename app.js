@@ -508,6 +508,10 @@ function setText(selector, key) {
   if (element) element.textContent = t(key);
 }
 
+function setNavLabel(view, key) {
+  setText(`[data-view="${view}"] .nav-label`, key);
+}
+
 function setAttribute(selector, name, key) {
   const element = document.querySelector(selector);
   if (element) element.setAttribute(name, t(key));
@@ -529,10 +533,10 @@ function applyLanguage() {
   setAttribute('meta[name="description"]', "content", "appDescription");
 
   setText(".brand small", "brandSubtitle");
-  setText('[data-view="dashboard"]', "navDashboard");
-  setText('[data-view="entry"]', "navEntry");
-  setText('[data-view="categories"]', "navCategories");
-  setText('[data-view="payments"]', "navPayments");
+  setNavLabel("dashboard", "navDashboard");
+  setNavLabel("entry", "navEntry");
+  setNavLabel("categories", "navCategories");
+  setNavLabel("payments", "navPayments");
 
   els.searchInput.placeholder = t("searchPlaceholder");
   els.searchInput.setAttribute("aria-label", t("searchAria"));
