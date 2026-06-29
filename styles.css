@@ -2245,7 +2245,8 @@ select {
   min-height: 58px;
   padding: 8px 0 10px;
   background: rgba(251, 251, 251, 0.88);
-  backdrop-filter: blur(18px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .brand {
