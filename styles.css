@@ -843,6 +843,25 @@ select:focus,
   min-height: 560px;
 }
 
+.entry-panel > .section-heading {
+  margin-bottom: 18px;
+}
+
+.entry-panel > .section-heading > div {
+  display: grid;
+  gap: 10px;
+}
+
+.entry-panel > .section-heading .eyebrow {
+  margin: 0;
+  line-height: 1.25;
+}
+
+.entry-panel > .section-heading h1 {
+  font-size: clamp(2.15rem, 4.2vw, 3rem);
+  line-height: 1.18;
+}
+
 form {
   display: grid;
   gap: 16px;
