@@ -89,6 +89,14 @@ The script creates and rewrites only these tabs:
 - `xPen_Categories`
 - `xPen_PaymentMethods`
 
+Transaction backups are split into monthly tabs automatically. For example,
+transactions dated `2026-06-01` through `2026-06-30` are written to
+`xPen_2026-06`, and a new month creates a new `xPen_YYYY-MM` tab on the next
+backup. Rows without a valid `YYYY-MM-DD` date go to `xPen_NoDate`.
+
+`xPen_Transactions` is kept as a legacy fallback. After the monthly tab version
+is deployed, new backups clear that tab and restore data from the monthly tabs.
+
 Existing browser data is not uploaded automatically. Use **บันทึกลง Sheet** in xPen when you want to back it up, and use **โหลดจาก Sheet** only when you want the Sheet copy to replace the current browser copy.
 
 ## Deploy Free With GitHub Pages

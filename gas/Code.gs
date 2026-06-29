@@ -6,6 +6,10 @@ const SHEETS = {
   paymentMethods: "xPen_PaymentMethods",
 };
 
+const MONTHLY_TRANSACTION_SHEET_PREFIX = "xPen_";
+const MONTHLY_TRANSACTION_SHEET_PATTERN = /^xPen_\d{4}-\d{2}$/;
+const UNSCHEDULED_TRANSACTION_SHEET = "xPen_NoDate";
+
 const TRANSACTION_HEADERS = [
   "id",
   "type",
@@ -69,9 +73,7 @@ function readWorkbook_() {
     app: "xPen",
     version: 2,
     exportedAt: new Date().toISOString(),
-    transactions: readObjects_(SHEETS.transactions, TRANSACTION_HEADERS).map(
-      normalizeTransaction_,
-    ),
+    transactions: readTransactions_().map(normalizeTransaction_),
     categories: readCategories_(),
     paymentMethods: readObjects_(SHEETS.paymentMethods, PAYMENT_METHOD_HEADERS),
   };
@@ -86,9 +88,100 @@ function writeWorkbook_(payload) {
     : [];
   const categories = payload.categories || {};
 
-  writeObjects_(SHEETS.transactions, TRANSACTION_HEADERS, transactions);
+  writeTransactions_(transactions);
   writeObjects_(SHEETS.paymentMethods, PAYMENT_METHOD_HEADERS, paymentMethods);
   writeCategories_(categories);
+}
+
+function readTransactions_() {
+  const monthlyRows = readMonthlyTransactions_();
+
+  if (monthlyRows.length) {
+    return monthlyRows;
+  }
+
+  return readObjects_(SHEETS.transactions, TRANSACTION_HEADERS);
+}
+
+function readMonthlyTransactions_() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const rows = [];
+
+  spreadsheet.getSheets().forEach(function (sheet) {
+    if (isMonthlyTransactionSheet_(sheet.getName())) {
+      rows.push.apply(rows, readObjectsFromSheet_(sheet, TRANSACTION_HEADERS));
+    }
+  });
+
+  return rows.sort(function (a, b) {
+    return (
+      String(a.date || "").localeCompare(String(b.date || "")) ||
+      String(a.createdAt || "").localeCompare(String(b.createdAt || ""))
+    );
+  });
+}
+
+function writeTransactions_(transactions) {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const grouped = {};
+
+  transactions.forEach(function (transaction) {
+    const sheetName = getTransactionSheetName_(transaction);
+    if (!grouped[sheetName]) {
+      grouped[sheetName] = [];
+    }
+    grouped[sheetName].push(transaction);
+  });
+
+  const targetNames = {};
+  spreadsheet.getSheets().forEach(function (sheet) {
+    if (isMonthlyTransactionSheet_(sheet.getName())) {
+      targetNames[sheet.getName()] = true;
+    }
+  });
+  Object.keys(grouped).forEach(function (sheetName) {
+    targetNames[sheetName] = true;
+  });
+
+  Object.keys(targetNames).forEach(function (sheetName) {
+    writeObjects_(
+      sheetName,
+      TRANSACTION_HEADERS,
+      grouped[sheetName] || [],
+    );
+  });
+
+  writeObjects_(SHEETS.transactions, TRANSACTION_HEADERS, []);
+}
+
+function getTransactionSheetName_(transaction) {
+  const monthKey = getMonthKey_(transaction && transaction.date);
+  return monthKey
+    ? MONTHLY_TRANSACTION_SHEET_PREFIX + monthKey
+    : UNSCHEDULED_TRANSACTION_SHEET;
+}
+
+function getMonthKey_(value) {
+  if (Object.prototype.toString.call(value) === "[object Date]") {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), "yyyy-MM");
+  }
+
+  const match = String(value || "")
+    .trim()
+    .match(/^(\d{4})-(\d{2})(?:-\d{2})?/);
+
+  if (!match) {
+    return "";
+  }
+
+  return match[1] + "-" + match[2];
+}
+
+function isMonthlyTransactionSheet_(name) {
+  return (
+    MONTHLY_TRANSACTION_SHEET_PATTERN.test(name) ||
+    name === UNSCHEDULED_TRANSACTION_SHEET
+  );
 }
 
 function readCategories_() {
@@ -119,6 +212,10 @@ function writeCategories_(categories) {
 
 function readObjects_(sheetName, headers) {
   const sheet = getSheet_(sheetName, headers);
+  return readObjectsFromSheet_(sheet, headers);
+}
+
+function readObjectsFromSheet_(sheet, headers) {
   const lastRow = sheet.getLastRow();
 
   if (lastRow < 2) {

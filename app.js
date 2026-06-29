@@ -118,6 +118,11 @@ const compactMoney = new Intl.NumberFormat("th-TH", {
   maximumFractionDigits: 1,
 });
 
+const sheetSyncQueue = {
+  inFlight: false,
+  pending: false,
+};
+
 init();
 
 function init() {
@@ -256,6 +261,7 @@ function saveNewTransaction(transaction) {
   persistTransactions();
   resetTransactionForm();
   render();
+  scheduleSheetsBackup();
 }
 
 function resetTransactionForm() {
@@ -954,6 +960,7 @@ function handleEditTransactionSubmit(event) {
   persistTransactions();
   closeEditTransactionModal();
   render();
+  scheduleSheetsBackup();
 }
 
 function getSelectedEditType() {
@@ -1035,6 +1042,7 @@ function removeTransaction(id) {
   state.transactions = state.transactions.filter((item) => item.id !== id);
   persistTransactions();
   render();
+  scheduleSheetsBackup();
 }
 
 function resetData() {
@@ -1104,9 +1112,19 @@ function importJson(event) {
   reader.readAsText(file);
 }
 
-async function backupToSheets() {
-  setSheetsSyncStatus("กำลังบันทึกลง Google Sheet...");
-  setSheetsButtonsDisabled(true);
+async function backupToSheets(options = {}) {
+  const isAutomatic = Boolean(options.automatic);
+  const manageButtons = options.manageButtons !== false;
+
+  setSheetsSyncStatus(
+    isAutomatic
+      ? "กำลัง sync รายการล่าสุดลง Google Sheet..."
+      : "กำลังบันทึกลง Google Sheet...",
+  );
+
+  if (manageButtons) {
+    setSheetsButtonsDisabled(true);
+  }
 
   try {
     const response = await fetch("/api/sheets", {
@@ -1124,13 +1142,40 @@ async function backupToSheets() {
     }
 
     setSheetsSyncStatus(
-      `บันทึกลง Sheet แล้ว: ${state.transactions.length} รายการ`,
+      isAutomatic
+        ? `sync ลง Sheet แล้ว: ${state.transactions.length} รายการ`
+        : `บันทึกลง Sheet แล้ว: ${state.transactions.length} รายการ`,
     );
   } catch (error) {
     setSheetsSyncStatus(
       "ยัง sync ไม่ได้ ตรวจ Vercel env และ Apps Script Web App URL",
     );
   } finally {
+    if (manageButtons) {
+      setSheetsButtonsDisabled(false);
+    }
+  }
+}
+
+function scheduleSheetsBackup() {
+  sheetSyncQueue.pending = true;
+
+  if (!sheetSyncQueue.inFlight) {
+    void flushSheetsBackupQueue();
+  }
+}
+
+async function flushSheetsBackupQueue() {
+  sheetSyncQueue.inFlight = true;
+  setSheetsButtonsDisabled(true);
+
+  try {
+    while (sheetSyncQueue.pending) {
+      sheetSyncQueue.pending = false;
+      await backupToSheets({ automatic: true, manageButtons: false });
+    }
+  } finally {
+    sheetSyncQueue.inFlight = false;
     setSheetsButtonsDisabled(false);
   }
 }
