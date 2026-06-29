@@ -2430,3 +2430,41 @@ select {
     max-width: 100%;
   }
 }
+
+@media (max-width: 1120px) {
+  body > .main-nav {
+    position: fixed !important;
+    top: auto !important;
+    right: 10px !important;
+    bottom: 10px !important;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 10px !important;
+    z-index: 1000 !important;
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 70px !important;
+    margin: 0 !important;
+    padding: 6px !important;
+    overflow: hidden !important;
+    transform: none !important;
+  }
+
+  body > .main-nav .nav-link {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    padding: 6px 2px 5px !important;
+    overflow: hidden !important;
+    border-radius: 16px !important;
+    font-size: 0.68rem !important;
+  }
+
+  body > .main-nav .nav-link.is-active {
+    box-shadow: none !important;
+  }
+}
