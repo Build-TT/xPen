@@ -2082,3 +2082,140 @@ select,
     display: none;
   }
 }
+
+/* Thai text needs extra vertical room; keep the playful shape without clipped marks. */
+body,
+button,
+input,
+select {
+  font-family: "Noto Sans Thai", "Mali", "Segoe UI", system-ui, sans-serif;
+}
+
+.brand strong {
+  font-family: "Mali", "Noto Sans Thai", cursive;
+  line-height: 1.35;
+}
+
+.hero-copy h1 {
+  line-height: 1.12;
+}
+
+.brand-word {
+  line-height: 1.15;
+}
+
+.hero-line,
+.hero-subtitle {
+  font-family: "Noto Sans Thai", "Mali", "Segoe UI", system-ui, sans-serif;
+  line-height: 1.38;
+}
+
+.eyebrow {
+  display: block;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.section-heading {
+  align-items: start;
+  gap: 18px;
+}
+
+.section-heading > div {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.section-heading h1,
+.section-heading h2,
+.modal-header h2 {
+  font-family: "Noto Sans Thai", "Mali", "Segoe UI", system-ui, sans-serif;
+  line-height: 1.34;
+  overflow: visible;
+}
+
+.section-heading h1 {
+  font-size: clamp(1.85rem, 3.4vw, 2.75rem);
+}
+
+.section-heading h2,
+.modal-header h2 {
+  font-size: clamp(1.08rem, 2.1vw, 1.42rem);
+}
+
+.entry-panel > .section-heading {
+  margin-bottom: 20px;
+}
+
+.entry-panel > .section-heading > div {
+  gap: 8px;
+}
+
+.entry-panel > .section-heading h1 {
+  font-size: clamp(2rem, 3.8vw, 2.75rem);
+  line-height: 1.36;
+}
+
+.transactions-panel > .section-heading {
+  display: grid;
+  grid-template-columns: max-content minmax(240px, 1fr);
+}
+
+.transactions-panel > .section-heading select {
+  min-width: 0;
+}
+
+.metric {
+  overflow: visible;
+}
+
+.metric strong,
+.mini-summary strong,
+.transaction-amount,
+.amount-field input,
+.mini-stats b {
+  font-family: "Noto Sans Thai", "Segoe UI", system-ui, sans-serif;
+  line-height: 1.28;
+}
+
+.metric strong {
+  margin: 10px 0 6px;
+  padding-top: 2px;
+}
+
+.mini-summary strong,
+.amount-field input {
+  padding-top: 4px;
+}
+
+.transaction-main strong,
+.transaction-main span,
+.category-topline,
+.payment-chip {
+  line-height: 1.35;
+}
+
+.month-picker label,
+.field span,
+.segmented-control legend,
+.mini-summary > span,
+.metric span,
+.metric small,
+.mini-stats small {
+  line-height: 1.4;
+}
+
+@media (max-width: 700px) {
+  .transactions-panel > .section-heading {
+    grid-template-columns: 1fr;
+  }
+
+  .section-heading h1 {
+    font-size: clamp(1.7rem, 9vw, 2.35rem);
+  }
+
+  .entry-panel > .section-heading h1 {
+    font-size: clamp(1.85rem, 10vw, 2.55rem);
+  }
+}
